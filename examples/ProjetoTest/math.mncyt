@@ -1,0 +1,57 @@
+fn sum[a: Int32, b: Int32] -> Int32 {
+    return a + b
+}
+
+fn sub[a: Int32, b: Int32] -> Int32 {
+    return a - b
+}
+
+fn mult[a: Int32, b: Int32] -> Int32 {
+    return a * b
+}
+
+fn div[a: Int32, b: Int32] -> Int32 {
+    return a / b
+}
+
+fn mod[a: Int32, b: Int32] -> Int32 {
+    return a % b
+}
+
+fn sqrt[a: Int32] -> Int32 {
+    var result: Int32 = 0
+    while [result * result < a] {
+        result = result + 1
+    }
+    return result
+}
+
+fn factorial[n: Int32] -> Int32 {
+    if n <= 1 {
+        return 1
+    } else {
+        return n * factorial[n - 1]
+    }
+}
+
+fn fibonacci[n: Int32] -> Int32 {
+    if n <= 1 {
+        return n
+    } else {
+        return fibonacci[n - 1] + fibonacci[n - 2]
+    }
+}
+
+fn gcd[a: Int32, b: Int32] -> Int32 {
+    if b == 0 {
+        return a
+    } else {
+        return gcd[b, a % b]
+    }
+} 
+
+fn lcm[a: Int32, b: Int32] -> Int32 {
+    return (a * b) / gcd[a, b]
+}
+
+// só coloquei aqui pra poder mandar outro commit skskks
