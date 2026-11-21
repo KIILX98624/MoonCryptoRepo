@@ -963,8 +963,22 @@ private:
         while (position_ < source_.size() && (std::isalnum(static_cast<unsigned char>(source_[position_])) || source_[position_] == '_')) {
             ++position_;
         }
+        // Namespaced native calls such as json.set[...] are valid statements too.
+        while (position_ < source_.size() && source_[position_] == '.') {
+            ++position_;
+            if (position_ >= source_.size() ||
+                !(std::isalpha(static_cast<unsigned char>(source_[position_])) || source_[position_] == '_')) {
+                position_ = saved_pos;
+                return false;
+            }
+            while (position_ < source_.size() &&
+                   (std::isalnum(static_cast<unsigned char>(source_[position_])) || source_[position_] == '_')) {
+                ++position_;
+            }
+        }
         const std::string name = source_.substr(start, position_ - start);
-        if (functions_.find(name) == functions_.end()) {
+        const bool native_json_call = name.rfind("json.", 0) == 0;
+        if (functions_.find(name) == functions_.end() && !native_json_call) {
             position_ = saved_pos;
             return false;
         }
@@ -997,9 +1011,14 @@ private:
         if (!expect(';')) return fail("expected ';' after function call to '" + name + "'");
 
         if (active) {
-            auto args = parse_argument_list(arg_content);
-            auto res = call_function(name, args);
-            if (!res) return false;
+            if (native_json_call) {
+                auto result = evaluate_expression(name + "[" + arg_content + "]");
+                if (!result) return fail("invalid call to JSON module function '" + name + "'");
+            } else {
+                auto args = parse_argument_list(arg_content);
+                auto res = call_function(name, args);
+                if (!res) return false;
+            }
         }
         return true;
     }
