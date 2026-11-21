@@ -145,9 +145,9 @@ mooncyt examples\modules\main.mncyt
 
 ### Módulo JSON nativo
 
-O interpretador inclui o módulo \`json\`. Ele é ativado com \`#external "json"\` e não exige arquivo \`.mncyt\` separado nem dependência externa.
+O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.mncyt` separado nem dependência externa.
 
-\`\`\`mncyt
+```mncyt
 #external "json"
 
 fn main[] -> Int32 {
@@ -160,31 +160,31 @@ fn main[] -> Int32 {
     print[json.stringify[documento]];
     return 0;
 }
-\`\`\`
+```
 
 Funções disponíveis:
 
 | Função | Descrição |
 |---|---|
-| \`json.parse[texto]\` | Analisa uma string JSON e retorna \`JsonValue\`. |
-| \`json.stringify[valor]\` | Serializa \`JsonValue\` em JSON compacto válido. |
-| \`json.read[caminho]\` | Lê e analisa um arquivo JSON. |
-| \`json.write[caminho, valor]\` | Grava um \`JsonValue\` em arquivo. |
-| \`json.get[objeto, chave]\` | Obtém uma propriedade; para arrays, recebe um índice inteiro. |
-| \`json.has[objeto, chave]\` | Verifica se uma propriedade existe. |
-| \`json.type[valor]\` | Retorna \`null\`, \`boolean\`, \`number\`, \`string\`, \`array\` ou \`object\`. |
-| \`json.length[valor]\` | Retorna o tamanho de array, objeto ou string. |
-| \`json.new_object[]\` / \`json.new_array[]\` | Cria um objeto ou array vazio. |
-| \`json.null[]\` | Cria o valor JSON \`null\`. |
-| \`json.from_string[texto]\` | Converte uma string MoonCrypto em valor JSON string. |
-| \`json.from_int[numero]\` | Converte um inteiro em valor JSON number. |
-| \`json.from_bool[bool]\` | Converte um booleano em valor JSON boolean. |
-| \`json.set[objeto, chave, valor]\` | Define ou substitui uma propriedade de objeto. |
-| \`json.push[array, valor]\` | Adiciona um valor ao final de um array. |
+| `json.parse[texto]` | Analisa uma string JSON e retorna `JsonValue`. |
+| `json.stringify[valor]` | Serializa `JsonValue` em JSON compacto válido. |
+| `json.read[caminho]` | Lê e analisa um arquivo JSON. |
+| `json.write[caminho, valor]` | Grava um `JsonValue` em arquivo. |
+| `json.get[objeto, chave]` | Obtém uma propriedade; para arrays, recebe um índice inteiro. |
+| `json.has[objeto, chave]` | Verifica se uma propriedade existe. |
+| `json.type[valor]` | Retorna `null`, `boolean`, `number`, `string`, `array` ou `object`. |
+| `json.length[valor]` | Retorna o tamanho de array, objeto ou string. |
+| `json.new_object[]` / `json.new_array[]` | Cria um objeto ou array vazio. |
+| `json.null[]` | Cria o valor JSON `null`. |
+| `json.from_string[texto]` | Converte uma string MoonCrypto em valor JSON string. |
+| `json.from_int[numero]` | Converte um inteiro em valor JSON number. |
+| `json.from_bool[bool]` | Converte um booleano em valor JSON boolean. |
+| `json.set[objeto, chave, valor]` | Define ou substitui uma propriedade de objeto. |
+| `json.push[array, valor]` | Adiciona um valor ao final de um array. |
 
-Os valores retornados por \`json.get\` podem ser convertidos com \`.as_string[]\`, \`.as_int[]\` e \`.as_bool[]\`. Essas conversões falham quando o tipo JSON não corresponde ao tipo solicitado. \`json.set\` e \`json.push\` modificam o objeto/array compartilhado e retornam \`Bool\`.
+Os valores retornados por `json.get` podem ser convertidos com `.as_string[]`, `.as_int[]` e `.as_bool[]`. Essas conversões falham quando o tipo JSON não corresponde ao tipo solicitado. `json.set` e `json.push` modificam o objeto/array compartilhado e retornam `Bool`.
 
-O parser aceita os tipos JSON padrão, escapes de string, escapes Unicode \`\\uXXXX\`, números inteiros e decimais, arrays e objetos aninhados. A profundidade máxima é 128 níveis e strings de entrada/arquivos têm limite de 8 MiB. A serialização é compacta; a ordem das propriedades de objetos é ordenada pelas chaves. Erros de parsing ou de arquivo fazem a expressão falhar no interpretador.
+O parser aceita os tipos JSON padrão, escapes de string, escapes Unicode `\\uXXXX`, números inteiros e decimais, arrays e objetos aninhados. A profundidade máxima é 128 níveis e strings de entrada/arquivos têm limite de 8 MiB. A serialização é compacta; a ordem das propriedades de objetos é ordenada pelas chaves. Erros de parsing ou de arquivo fazem a expressão falhar no interpretador.
 
 
 ### Criptografia com `use crypto`
