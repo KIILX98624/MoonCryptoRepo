@@ -17,12 +17,12 @@ O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md)
 Com um compilador C++20 disponível:
 
 ```sh
-g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o moon
-./moon entry examples/hello
-./moon run examples/hello
+g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o moon.exe
+./mooncyt examples/hello
+./mooncyt examples/hello
 ```
 
-No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.mncyt`; o segundo exibe `Hello, MoonCrypto!`.
+No Windows. O primeiro comando retorna `main.mncyt`; o segundo exibe `Hello, MoonCrypto!`.
 
 ### Comando global `mooncyt`
 
@@ -34,7 +34,7 @@ mooncyt caminho\para\programa.mncyt
 
 O binário está em `C:\Program Files\MoonCrypto\mooncyt.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `mooncyt` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
 
-O executável configura a saída do console do Windows como UTF-8, permitindo imprimir caracteres como `é` corretamente.
+O executável configura a saída do console do Windows como UTF-8, permitindo imprimir caracteres como `é` sejam imprimidos corretamente.
 
 ### `if` e `else` no protótipo
 
@@ -53,8 +53,8 @@ fn main[] -> Int32 {
 
 Teste o exemplo com:
 
-```powershell
-.\moon.exe run examples\if_else
+```powershell 
+.\moon.exe run examples\if_else  **(Erro Descoberto!!)**
 ```
 
 O resultado deve ser `if funcionou`. A implementação ainda é experimental e aceita apenas declarações `let` com valores inteiros e comparações simples.
@@ -107,7 +107,7 @@ O interpretador executa o formato `for` inteiro mostrado acima e laços `while [
 Teste o exemplo de `while` com:
 
 ```powershell
-.\moon.exe run examples\while
+.\moon.exe run examples\while  **(Erro Descoberto!!)**
 ```
 
 ### Módulos e Funções com `#external`
@@ -139,7 +139,7 @@ fn main[] -> Int32 {
 Teste o exemplo de módulos com:
 
 ```powershell
-mooncyt examples\modules\main.mncyt
+mooncyt examples\modules\main.mncyt **(Esse funciona)**
 ```
 
 
@@ -256,7 +256,7 @@ O compilador, provisoriamente chamado `moon`, traduz arquivos `.mncyt` para cód
 
 O artefato será um executável nativo do sistema de destino. O compilador deve permitir builds para x64 e ARM64, inicialmente nos sistemas operacionais escolhidos para a primeira versão.
 
-Exemplo de comandos planejados:
+Exemplo de comandos ```planejados```:
 
 ```text
 moon build
@@ -354,8 +354,8 @@ A linguagem terá uma biblioteca criptográfica oficial. A orientação é reuti
 Exemplo ilustrativo:
 
 ```cpp
-import crypto.aead;
-import crypto.random;
+use crypto.aead;
+use crypto.random;
 
 fn seal(key: SecretKey, message: Bytes) -> Result<SealedData, CryptoError> {
     let nonce = crypto.random.secure_nonce()?;
