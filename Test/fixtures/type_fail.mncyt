@@ -1,0 +1,5 @@
+fn main[] -> Int32 {
+    let number: Int32 = "not a number";
+    print[number];
+    return 0;
+}

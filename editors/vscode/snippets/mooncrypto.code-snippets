@@ -1,0 +1,103 @@
+{
+  "MoonCrypto main": {
+    "prefix": "main",
+    "body": [
+      "fn main[] -> Int32 {",
+      "    $0",
+      "    return 0;",
+      "}"
+    ],
+    "description": "Create a MoonCrypto main function"
+  },
+  "Print text": {
+    "prefix": "print",
+    "body": "print[\"${1:Hello, MoonCrypto!}\"];",
+    "description": "Print a string literal"
+  },
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}[${2}] -> ${3:Int32} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a typed function"
+  },
+  "Struct": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:Name} {",
+      "    ${2:field}: ${3:String},",
+      "}"
+    ],
+    "description": "Create a struct"
+  },
+  "Const": {
+    "prefix": "const",
+    "body": "const ${1:NAME}: ${2:Int32} = ${3:0};",
+    "description": "Create an immutable constant"
+  },
+  "Class": {
+    "prefix": "class",
+    "body": [
+      "class ${1:Name} {",
+      "    ${2:field}: ${3:Int32};",
+      "}"
+    ],
+    "description": "Create a class declaration"
+  },
+  "Bytes": {
+    "prefix": "bytes",
+    "body": "let ${1:data} = Bytes[${2:1}, ${3:2}, ${4:255}];",
+    "description": "Create a byte sequence"
+  },
+  "Bool": {
+    "prefix": "bool",
+    "body": "let ${1:enabled}: Bool = ${2:true};",
+    "description": "Create a boolean variable"
+  },
+  "Result": {
+    "prefix": "result",
+    "body": [
+      "let ${1:result}: Result = ok[${2:value}];",
+      "if (${1:result}.is_ok[]) {",
+      "    print[${1:result}.unwrap[]];",
+      "}"
+    ],
+    "description": "Create and inspect an explicit Result"
+  },
+  "Secure random bytes": {
+    "prefix": "randombytes",
+    "body": "let ${1:nonce} = crypto.random_bytes[${2:32}];",
+    "description": "Generate cryptographically secure random bytes"
+  },
+  "If else": {
+    "prefix": "ifelse",
+    "body": [
+      "if (${1:true}) {",
+      "    $2",
+      "} else {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create an if/else statement"
+  },
+  "While": {
+    "prefix": "while",
+    "body": [
+      "while [${1:true}] {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a MoonCrypto while loop"
+  },
+  "For": {
+    "prefix": "for",
+    "body": [
+      "for [let ${1:i}: Int32 = 0; ${1:i} < ${2:5}; ${1:i} = ${1:i} + 1] {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a MoonCrypto for loop"
+  }
+}

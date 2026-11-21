@@ -1,0 +1,5 @@
+fn main[] -> Int32 {
+    let tag = crypto.hmac_sha256["The quick brown fox jumps over the lazy dog", "key"];
+    print[tag.hex[]];
+    return 0;
+}

@@ -1,0 +1,4 @@
+fn main[] -> Int32 {
+    let bad: UInt8 = 256;
+    return 0;
+}

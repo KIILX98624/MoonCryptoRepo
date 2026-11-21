@@ -1,0 +1,8 @@
+use crypto
+
+fn main[] -> Int32 {
+    let texto = "MoonCrypto";
+    let h = crypto.sha256[texto];
+    print["SHA-256: " + h.hex[]];
+    return 0;
+}

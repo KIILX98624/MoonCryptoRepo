@@ -1,0 +1,7 @@
+/build/
+/moon
+/moon.exe
+/mooncyt.exe
+/Test/mooncyt-smoke.exe
+*.obj
+*.o

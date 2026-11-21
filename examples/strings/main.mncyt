@@ -1,0 +1,35 @@
+fn main[] -> Int32 {
+    let titulo: String32 = "MoonCrypto 32 bits";
+    let descricao: String64 = "Linguagem nativa com foco em segurança";
+    let letra: Char = 'M';
+    let versao: Int32 = 1;
+
+    print["--- Teste de Strings e Char ---"];
+    print[titulo];
+    print[descricao];
+    print["Letra inicial: " + letra];
+    print["Versão: " + versao];
+
+    // Concatenação
+    let juncao: String64 = titulo + " :: " + descricao;
+    print[juncao];
+
+    // Reatribuição
+    titulo = "Novo Titulo Atualizado";
+    letra = 'C';
+    print["Titulo apos reatribuicao: " + titulo];
+    print["Letra apos reatribuicao: " + letra];
+
+    // Condicional if com String e Char
+    if (letra == 'C') {
+        print["Condicao de Char funcionou!"];
+    } else {
+        print["Condicao de Char falhou"];
+    }
+
+    if (titulo == "Novo Titulo Atualizado") {
+        print["Condicao de String funcionou!"];
+    }
+
+    return 0;
+}

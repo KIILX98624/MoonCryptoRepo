@@ -1,0 +1,12 @@
+#external "math"
+#external "robot"
+
+fn main[] -> Int32 {
+
+    falar["oi"];
+    let somaResult: Int32 = somar[10, 20];
+    
+    print["A soma de 10 e 20 é: " + somaResult];
+
+    return 0;
+}

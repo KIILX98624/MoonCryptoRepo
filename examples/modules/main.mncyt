@@ -1,0 +1,12 @@
+#external "math"
+
+fn main[] -> Int32 {
+    let s: Int32 = sum[15, 25];
+    let m: Int32 = multiply[s, 2];
+
+    print["Soma: " + s];
+    print["Multiplicação (soma * 2): " + m];
+    print["Direto no print: " + sum[100, 200]];
+
+    return 0;
+}

@@ -1,0 +1,11 @@
+fn main[] -> Int32 {
+    let success: Result = ok[42];
+    let failure: Result = err["falhou"];
+    if (success.is_ok[]) {
+        print["value=" + success.unwrap[]];
+    }
+    if (!failure.is_ok[]) {
+        print["error=" + failure.error[]];
+    }
+    return 0;
+}

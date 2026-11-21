@@ -1,0 +1,5 @@
+fn main[] -> Int32 {
+    let random = crypto.random_bytes[8];
+    print[random.hex[]];
+    return 0;
+}

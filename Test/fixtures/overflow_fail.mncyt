@@ -1,0 +1,6 @@
+fn main[] -> Int32 {
+    let value: Int64 = 9223372036854775807;
+    let invalid = value + 1;
+    print[invalid];
+    return 0;
+}

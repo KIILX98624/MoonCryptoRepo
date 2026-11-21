@@ -1,0 +1,3 @@
+fn broken[ -> Int32 {
+    return 0;
+}

@@ -1,0 +1,7 @@
+fn main[] -> Int32 {
+    let masked: Int32 = 6 & 3;
+    let shifted: Int32 = 1 << 3;
+    let combined: Int32 = masked | shifted;
+    print["bits=" + combined];
+    return 0;
+}

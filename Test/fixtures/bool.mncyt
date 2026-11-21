@@ -1,0 +1,7 @@
+fn main[] -> Int32 {
+    let enabled: Bool = true;
+    if (enabled && !false) {
+        print["bool-ok"];
+    }
+    return 0;
+}

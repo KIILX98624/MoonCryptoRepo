@@ -1,0 +1,6 @@
+fn main[] -> Int32 {
+    let data = Bytes[1, 2, 255];
+    print["byte-0=" + data[0]];
+    print["byte-2=" + data[2]];
+    return 0;
+}

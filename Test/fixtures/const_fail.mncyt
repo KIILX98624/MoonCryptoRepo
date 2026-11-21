@@ -1,0 +1,5 @@
+fn main[] -> Int32 {
+    const LIMIT: Int32 = 10;
+    LIMIT = 11;
+    return 0;
+}

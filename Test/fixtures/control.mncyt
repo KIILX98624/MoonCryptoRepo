@@ -1,0 +1,20 @@
+fn main[] -> Int32 {
+    const LIMIT: Int32 = 3;
+    let count: Int32 = 0;
+
+    if (count == 0 && !(count > LIMIT)) {
+        print["if-ok"];
+    } else {
+        print["if-fail"];
+    }
+
+    while [count < LIMIT] {
+        print["while-" + count];
+        count = count + 1;
+    }
+
+    for [let i: Int32 = 0; i < 2; i = i + 1] {
+        print["for-" + i];
+    }
+    return 0;
+}

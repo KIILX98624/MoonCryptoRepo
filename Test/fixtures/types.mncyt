@@ -1,0 +1,13 @@
+struct User {
+    name: String32;
+}
+
+class Wallet {
+    balance: Int64;
+}
+
+fn main[] -> Int32 {
+    const LIMIT: Int32 = 10;
+    print["limit=" + LIMIT];
+    return 0;
+}
