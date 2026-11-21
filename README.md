@@ -10,7 +10,7 @@
 
 ### VS Code
 
-O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-0.1.0.vsix` pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-0.1.0.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.mncyt`. É suporte de edição; não oferece ainda diagnósticos do compilador.
+O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-1.5.4.vsix` pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-1.5.4.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.mncyt`. É suporte de edição; não oferece ainda diagnósticos do compilador.
 
 ### Compilar o protótipo
 
