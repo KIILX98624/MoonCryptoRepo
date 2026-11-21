@@ -1,4 +1,4 @@
-# MoonCrypto — Especificação técnica inicial v0.1
+# MoonCrypto — Especificação técnica inicial v1.0
 
 > A especificação atual de sintaxe, tipos, EBNF, imports, overflow, bytes, erros e ownership está em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
