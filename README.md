@@ -414,9 +414,7 @@ A busca não será recursiva nesta versão. A sensibilidade a maiúsculas e min�
 
 ## 9. Decisões abertas para a próxima revisão
 
-1. Quais sistemas operacionais devem fazer parte da primeira versão para x64 e ARM64?
-2. A busca por `init` deve incluir nomes como `initialize.mncyt` e `InitCrypto.mncyt`?
-3. Qual regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo?
-4. Para erros, você prefere investigar primeiro `Result`, exceções ou um modelo combinado?
-5. Quer definir agora um manifesto mínimo, incluindo formato e campo opcional `entry`?
-6. Há uma biblioteca criptográfica consolidada que você prefira avaliar para a implementação oficial?
+1. sistemas operacionais devem fazer parte da primeira versão para x64 e ARM64 e posteriormente sera disponibilizado suporte a Linux, MacOS e ChromeOS.
+3. regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo, ```Init.mncyt```, sera igual a ```init.mncyt```.
+4. Para erros, iremos ultilizar primeiro o `Result`, exceções ou um modelo robusto.
+6. Há umas biblioteca criptográfica consolidada que iremos ```adicionar posteriormente``` para a implementação oficial.
