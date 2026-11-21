@@ -1,0 +1,20 @@
+use json
+
+fn main[] -> Int32 {
+    let documento: JsonValue = json.parse["{\"nome\":\"MoonCrypto\",\"versao\":2,\"ativo\":true}"];
+    let nome: String32 = json.get[documento, "nome"].as_string[];
+    let versao: Int32 = json.get[documento, "versao"].as_int[];
+
+    print["Nome: " + nome];
+    print["Versão: " + versao];
+
+    let configuracao: JsonValue = json.new_object[];
+    json.set[configuracao, "nome", json.from_string["MoonCrypto"]];
+    json.set[configuracao, "versao", json.from_int[2]];
+    json.set[configuracao, "ativo", json.from_bool[true]];
+
+    let saida: String32 = json.stringify[configuracao];
+    print["JSON gerado: " + saida];
+
+    return 0;
+}

@@ -1,0 +1,9 @@
+fn main[] -> Int32 {
+    if (1 != 2) {// ou 2 != 2
+        print["if funcionou"];
+    } else {
+        print["else funcionou"];
+    }
+
+    return 0;
+}

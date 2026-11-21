@@ -1,0 +1,7 @@
+#external "math"
+
+fn main[] -> Int32 {
+    let valor: Int32 = soma[2, 3];
+    print[valor];
+    return 0;
+}

@@ -1,0 +1,9 @@
+use crypto
+
+fn main[] -> Int32 {
+    let texto: String32 = "Gu2323423stavo";
+    let h = crypto.sha256[texto];
+    print["Texto: " + texto];
+    print["SHA-256: " + h.hex[]];
+    return 0;
+}

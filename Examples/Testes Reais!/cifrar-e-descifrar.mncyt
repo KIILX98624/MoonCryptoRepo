@@ -1,0 +1,13 @@
+use crypto
+
+fn main[] -> Int32 {
+    let chave = crypto.key_from("senha-forte", 32);
+    let cifrado = crypto.aes_encrypt("segredo", chave);
+    print["Cifrado: " + cifrado.hex()];
+
+    let original = crypto.aes_decrypt(cifrado, chave);
+    print["Decifrado: " + original];
+    return 0;
+}
+
+//Configurar API no compilador

@@ -1,0 +1,24 @@
+fn main[] -> Int32 {
+    for [let i: Int32 = 0; i < 5; i = i + 1] {
+        if (i == 2) {
+            continue;
+        }
+        print["i = " + i];
+    }
+
+    let dia: Int32 = 2;
+    switch [dia] {
+        case 1 {
+            print["segunda-feira"];
+        }
+        case 2 {
+            print["terça-feira"];
+        }
+        default {
+            print["outro dia"];
+        }
+    }
+    return 0;
+}
+
+//ok
