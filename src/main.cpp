@@ -19,6 +19,9 @@
 #include <vector>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <bcrypt.h>
 #elif defined(MOONCRYPTO_USE_OPENSSL)
@@ -318,6 +321,7 @@ enum class ValueKind {
     Char,
     Boolean,
     Bytes,
+    Array,
     Json,
     Result
 };
@@ -330,6 +334,7 @@ struct Value {
     char char_val = '\0';
     bool bool_val = false;
     std::vector<unsigned char> bytes_val;
+    std::vector<Value> array_val;
     std::shared_ptr<JsonNode> json_val;
     bool result_ok = false;
     std::shared_ptr<Value> result_value;
@@ -374,6 +379,14 @@ struct Value {
         return val;
     }
 
+    static Value make_array(std::vector<Value> v, std::string type = "Array") {
+        Value val;
+        val.kind = ValueKind::Array;
+        val.type_name = std::move(type);
+        val.array_val = std::move(v);
+        return val;
+    }
+
     static Value make_json(std::shared_ptr<JsonNode> value) {
         Value val;
         val.kind = ValueKind::Json;
@@ -410,6 +423,14 @@ struct Value {
                 std::ostringstream out;
                 for (const auto byte : bytes_val) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
                 return out.str();
+            }
+            case ValueKind::Array: {
+                std::string out = "[";
+                for (std::size_t i = 0; i < array_val.size(); ++i) {
+                    if (i) out += ", ";
+                    out += array_val[i].to_string();
+                }
+                return out + "]";
             }
             case ValueKind::Json: return json_serialize(json_val);
             case ValueKind::Result:
@@ -480,6 +501,7 @@ bool value_matches_type(const Value& value, const std::string& type_name) {
     if (type_name == "Char") return value.kind == ValueKind::Char;
     if (type_name == "String" || type_name == "String32" || type_name == "String64") return value.kind == ValueKind::String;
     if (type_name == "Bytes") return value.kind == ValueKind::Bytes;
+    if (type_name == "Array" || type_name.rfind("Array<", 0) == 0) return value.kind == ValueKind::Array;
     if (type_name == "Json" || type_name == "JsonValue") return value.kind == ValueKind::Json;
     if (type_name == "Result" || type_name.rfind("Result<", 0) == 0) return value.kind == ValueKind::Result;
     if (type_name.rfind("Int", 0) == 0 || type_name.rfind("UInt", 0) == 0) {
@@ -539,7 +561,7 @@ std::optional<std::string> hmac_sha256_hex(const std::string& text, const std::s
 #ifdef _WIN32
     BCRYPT_ALG_HANDLE algorithm = nullptr;
     BCRYPT_HASH_HANDLE hash = nullptr;
-    if (BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0) return std::nullopt;
+    if (BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, BCRYPT_ALG_HANDLE_HMAC_FLAG) != 0) return std::nullopt;
     DWORD hash_length = 0, result_length = 0;
     if (BCryptGetProperty(algorithm, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&hash_length), sizeof(hash_length), &result_length, 0) != 0) {
         BCryptCloseAlgorithmProvider(algorithm, 0); return std::nullopt;
@@ -588,6 +610,258 @@ std::optional<std::vector<unsigned char>> secure_random_bytes(std::size_t size) 
 #elif defined(MOONCRYPTO_USE_OPENSSL)
     if (RAND_bytes(output.data(), static_cast<int>(output.size())) != 1) return std::nullopt;
     return output;
+#else
+    return std::nullopt;
+#endif
+}
+
+std::optional<std::vector<unsigned char>> hex_to_bytes(const std::string& hex) {
+    if (hex.size() % 2 != 0) return std::nullopt;
+    std::vector<unsigned char> bytes;
+    bytes.reserve(hex.size() / 2);
+    for (std::size_t i = 0; i < hex.size(); i += 2) {
+        int hi = -1, lo = -1;
+        char c1 = hex[i], c2 = hex[i + 1];
+        if (c1 >= '0' && c1 <= '9') hi = c1 - '0';
+        else if (c1 >= 'a' && c1 <= 'f') hi = c1 - 'a' + 10;
+        else if (c1 >= 'A' && c1 <= 'F') hi = c1 - 'A' + 10;
+        if (c2 >= '0' && c2 <= '9') lo = c2 - '0';
+        else if (c2 >= 'a' && c2 <= 'f') lo = c2 - 'a' + 10;
+        else if (c2 >= 'A' && c2 <= 'F') lo = c2 - 'A' + 10;
+        if (hi < 0 || lo < 0) return std::nullopt;
+        bytes.push_back(static_cast<unsigned char>((hi << 4) | lo));
+    }
+    return bytes;
+}
+
+std::optional<std::string> bytes_to_hex(const std::vector<unsigned char>& bytes) {
+    std::ostringstream out;
+    for (const auto b : bytes) {
+        out << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+    }
+    return out.str();
+}
+
+std::optional<std::string> crypto_derive_key_hex(const std::string& secret, std::size_t key_len) {
+    if (key_len == 0 || key_len > 64) key_len = 32;
+    auto h1 = sha256_hex(secret + ":kdf:moon");
+    if (!h1) return std::nullopt;
+    if (key_len <= 32) {
+        return h1->substr(0, key_len * 2);
+    }
+    auto h2 = sha256_hex(*h1 + ":next");
+    if (!h2) return std::nullopt;
+    std::string combined = *h1 + *h2;
+    return combined.substr(0, key_len * 2);
+}
+
+std::optional<std::string> aes_gcm_encrypt_hex(const std::string& plaintext, const std::string& key_str) {
+    std::vector<unsigned char> key_bytes;
+    if (key_str.size() == 64) {
+        auto maybe_bytes = hex_to_bytes(key_str);
+        if (maybe_bytes && maybe_bytes->size() == 32) key_bytes = std::move(*maybe_bytes);
+        else {
+            auto derived = crypto_derive_key_hex(key_str, 32);
+            if (!derived) return std::nullopt;
+            auto db = hex_to_bytes(*derived);
+            if (!db) return std::nullopt;
+            key_bytes = std::move(*db);
+        }
+    } else {
+        auto derived = crypto_derive_key_hex(key_str, 32);
+        if (!derived) return std::nullopt;
+        auto db = hex_to_bytes(*derived);
+        if (!db) return std::nullopt;
+        key_bytes = std::move(*db);
+    }
+
+    auto maybe_iv = secure_random_bytes(12);
+    if (!maybe_iv) return std::nullopt;
+    const auto& iv = *maybe_iv;
+
+#ifdef _WIN32
+    BCRYPT_ALG_HANDLE alg = nullptr;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_AES_ALGORITHM, nullptr, 0) != 0) return std::nullopt;
+    if (BCryptSetProperty(alg, BCRYPT_CHAINING_MODE,
+                          reinterpret_cast<PUCHAR>(const_cast<wchar_t*>(BCRYPT_CHAIN_MODE_GCM)),
+                          sizeof(BCRYPT_CHAIN_MODE_GCM), 0) != 0) {
+        BCryptCloseAlgorithmProvider(alg, 0);
+        return std::nullopt;
+    }
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    if (BCryptGenerateSymmetricKey(alg, &hKey, nullptr, 0,
+                                   key_bytes.data(), static_cast<ULONG>(key_bytes.size()), 0) != 0) {
+        BCryptCloseAlgorithmProvider(alg, 0);
+        return std::nullopt;
+    }
+
+    std::vector<unsigned char> tag(16);
+    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO authInfo;
+    BCRYPT_INIT_AUTH_MODE_INFO(authInfo);
+    std::vector<unsigned char> nonce = iv;
+    authInfo.pbNonce = nonce.data();
+    authInfo.cbNonce = static_cast<ULONG>(nonce.size());
+    authInfo.pbTag = tag.data();
+    authInfo.cbTag = static_cast<ULONG>(tag.size());
+
+    std::vector<unsigned char> ciphertext(plaintext.size());
+    ULONG bytes_done = 0;
+    NTSTATUS status = BCryptEncrypt(
+        hKey,
+        reinterpret_cast<PUCHAR>(const_cast<char*>(plaintext.data())),
+        static_cast<ULONG>(plaintext.size()),
+        &authInfo,
+        nullptr, 0,
+        ciphertext.data(),
+        static_cast<ULONG>(ciphertext.size()),
+        &bytes_done, 0
+    );
+
+    BCryptDestroyKey(hKey);
+    BCryptCloseAlgorithmProvider(alg, 0);
+    if (status != 0) return std::nullopt;
+
+    std::vector<unsigned char> final_blob;
+    final_blob.insert(final_blob.end(), iv.begin(), iv.end());
+    final_blob.insert(final_blob.end(), tag.begin(), tag.end());
+    final_blob.insert(final_blob.end(), ciphertext.begin(), ciphertext.end());
+    return bytes_to_hex(final_blob);
+#elif defined(MOONCRYPTO_USE_OPENSSL)
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return std::nullopt;
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1 ||
+        EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, nullptr) != 1 ||
+        EVP_EncryptInit_ex(ctx, nullptr, nullptr, key_bytes.data(), iv.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt;
+    }
+
+    std::vector<unsigned char> ciphertext(plaintext.size());
+    int len = 0;
+    if (EVP_EncryptUpdate(ctx, ciphertext.data(), &len,
+                          reinterpret_cast<const unsigned char*>(plaintext.data()), static_cast<int>(plaintext.size())) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt;
+    }
+    int extra_len = 0;
+    if (EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &extra_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt;
+    }
+    std::vector<unsigned char> tag(16);
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt;
+    }
+    EVP_CIPHER_CTX_free(ctx);
+
+    std::vector<unsigned char> final_blob;
+    final_blob.insert(final_blob.end(), iv.begin(), iv.end());
+    final_blob.insert(final_blob.end(), tag.begin(), tag.end());
+    final_blob.insert(final_blob.end(), ciphertext.begin(), ciphertext.end());
+    return bytes_to_hex(final_blob);
+#else
+    return std::nullopt;
+#endif
+}
+
+std::optional<std::string> aes_gcm_decrypt_hex(const std::string& cipher_hex, const std::string& key_str) {
+    auto maybe_blob = hex_to_bytes(cipher_hex);
+    if (!maybe_blob || maybe_blob->size() < 28) return std::nullopt; // 12 iv + 16 tag
+    const auto& blob = *maybe_blob;
+    std::vector<unsigned char> iv(blob.begin(), blob.begin() + 12);
+    std::vector<unsigned char> tag(blob.begin() + 12, blob.begin() + 28);
+    std::vector<unsigned char> ciphertext(blob.begin() + 28, blob.end());
+
+    std::vector<unsigned char> key_bytes;
+    if (key_str.size() == 64) {
+        auto maybe_bytes = hex_to_bytes(key_str);
+        if (maybe_bytes && maybe_bytes->size() == 32) key_bytes = std::move(*maybe_bytes);
+        else {
+            auto derived = crypto_derive_key_hex(key_str, 32);
+            if (!derived) return std::nullopt;
+            auto db = hex_to_bytes(*derived);
+            if (!db) return std::nullopt;
+            key_bytes = std::move(*db);
+        }
+    } else {
+        auto derived = crypto_derive_key_hex(key_str, 32);
+        if (!derived) return std::nullopt;
+        auto db = hex_to_bytes(*derived);
+        if (!db) return std::nullopt;
+        key_bytes = std::move(*db);
+    }
+
+#ifdef _WIN32
+    BCRYPT_ALG_HANDLE alg = nullptr;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_AES_ALGORITHM, nullptr, 0) != 0) return std::nullopt;
+    if (BCryptSetProperty(alg, BCRYPT_CHAINING_MODE,
+                          reinterpret_cast<PUCHAR>(const_cast<wchar_t*>(BCRYPT_CHAIN_MODE_GCM)),
+                          sizeof(BCRYPT_CHAIN_MODE_GCM), 0) != 0) {
+        BCryptCloseAlgorithmProvider(alg, 0);
+        return std::nullopt;
+    }
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    if (BCryptGenerateSymmetricKey(alg, &hKey, nullptr, 0,
+                                   key_bytes.data(), static_cast<ULONG>(key_bytes.size()), 0) != 0) {
+        BCryptCloseAlgorithmProvider(alg, 0);
+        return std::nullopt;
+    }
+
+    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO authInfo;
+    BCRYPT_INIT_AUTH_MODE_INFO(authInfo);
+    std::vector<unsigned char> nonce = iv;
+    authInfo.pbNonce = nonce.data();
+    authInfo.cbNonce = static_cast<ULONG>(nonce.size());
+    authInfo.pbTag = tag.data();
+    authInfo.cbTag = static_cast<ULONG>(tag.size());
+
+    std::vector<unsigned char> plaintext(ciphertext.size());
+    ULONG bytes_done = 0;
+    NTSTATUS status = BCryptDecrypt(
+        hKey,
+        ciphertext.empty() ? nullptr : ciphertext.data(),
+        static_cast<ULONG>(ciphertext.size()),
+        &authInfo,
+        nullptr, 0,
+        plaintext.empty() ? nullptr : plaintext.data(),
+        static_cast<ULONG>(plaintext.size()),
+        &bytes_done, 0
+    );
+
+    BCryptDestroyKey(hKey);
+    BCryptCloseAlgorithmProvider(alg, 0);
+    if (status != 0) return std::nullopt;
+
+    return std::string(plaintext.begin(), plaintext.begin() + bytes_done);
+#elif defined(MOONCRYPTO_USE_OPENSSL)
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return std::nullopt;
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1 ||
+        EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, nullptr) != 1 ||
+        EVP_DecryptInit_ex(ctx, nullptr, nullptr, key_bytes.data(), iv.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt;
+    }
+    std::vector<unsigned char> plaintext(ciphertext.size());
+    int len = 0;
+    if (!ciphertext.empty()) {
+        if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), static_cast<int>(ciphertext.size())) != 1) {
+            EVP_CIPHER_CTX_free(ctx);
+            return std::nullopt;
+        }
+    }
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt;
+    }
+    int extra_len = 0;
+    if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &extra_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::nullopt; // Tag authentication failed!
+    }
+    EVP_CIPHER_CTX_free(ctx);
+    return std::string(plaintext.begin(), plaintext.begin() + len + extra_len);
 #else
     return std::nullopt;
 #endif
@@ -1508,16 +1782,57 @@ private:
                 if (!bytes) return std::nullopt;
                 return Value::make_bytes(std::move(*bytes));
             }
+            if (fn_name == "crypto.key_from") {
+                const auto args = parse_argument_list(text.substr(open_pos + 1, text.size() - open_pos - 2));
+                if (args.empty()) return std::nullopt;
+                std::size_t klen = 32;
+                if (args.size() >= 2 && args[1].kind == ValueKind::Integer && args[1].int_val > 0) {
+                    klen = static_cast<std::size_t>(args[1].int_val);
+                }
+                auto k = crypto_derive_key_hex(args[0].to_string(), klen);
+                if (!k) return std::nullopt;
+                return Value::make_string(*k, "SecretKey");
+            }
+            if (fn_name == "crypto.aes_encrypt") {
+                const auto args = parse_argument_list(text.substr(open_pos + 1, text.size() - open_pos - 2));
+                if (args.size() != 2) return std::nullopt;
+                auto ct = aes_gcm_encrypt_hex(args[0].to_string(), args[1].to_string());
+                if (!ct) return std::nullopt;
+                return Value::make_string(*ct, "Ciphertext");
+            }
+            if (fn_name == "crypto.aes_decrypt") {
+                const auto args = parse_argument_list(text.substr(open_pos + 1, text.size() - open_pos - 2));
+                if (args.size() != 2) return std::nullopt;
+                auto pt = aes_gcm_decrypt_hex(args[0].to_string(), args[1].to_string());
+                if (!pt) return std::nullopt;
+                return Value::make_string(*pt, "String");
+            }
             const auto variable = variables_.find(fn_name);
-            if (variable != variables_.end() && variable->second.kind == ValueKind::Bytes) {
-                auto index = evaluate_integer_expression(text.substr(open_pos + 1, text.size() - open_pos - 2));
-                if (!index || *index < 0 || static_cast<std::size_t>(*index) >= variable->second.bytes_val.size()) return std::nullopt;
-                return Value::make_int(variable->second.bytes_val[static_cast<std::size_t>(*index)], "UInt8");
+            if (variable != variables_.end()) {
+                if (moved_variables_.find(fn_name) != moved_variables_.end()) {
+                    fail("use of moved value '" + fn_name + "'");
+                    return std::nullopt;
+                }
+                if (variable->second.kind == ValueKind::Bytes) {
+                    auto index = evaluate_integer_expression(text.substr(open_pos + 1, text.size() - open_pos - 2));
+                    if (!index || *index < 0 || static_cast<std::size_t>(*index) >= variable->second.bytes_val.size()) return std::nullopt;
+                    return Value::make_int(variable->second.bytes_val[static_cast<std::size_t>(*index)], "UInt8");
+                }
+                if (variable->second.kind == ValueKind::Array) {
+                    auto index = evaluate_integer_expression(text.substr(open_pos + 1, text.size() - open_pos - 2));
+                    if (!index || *index < 0 || static_cast<std::size_t>(*index) >= variable->second.array_val.size()) return std::nullopt;
+                    return variable->second.array_val[static_cast<std::size_t>(*index)];
+                }
             }
             if (functions_.find(fn_name) != functions_.end()) {
                 auto args = parse_argument_list(arg_content);
                 return call_function(fn_name, args);
             }
+        }
+
+        if (moved_variables_.find(text) != moved_variables_.end()) {
+            fail("use of moved value '" + text + "'");
+            return std::nullopt;
         }
 
         auto it = variables_.find(text);
@@ -1669,6 +1984,7 @@ private:
             if (used == text.size()) return value;
         } catch (...) {
         }
+        if (moved_variables_.find(text) != moved_variables_.end()) return std::nullopt;
         const auto found = variables_.find(text);
         if (found != variables_.end()) {
             if (found->second.kind == ValueKind::Integer) return found->second.int_val;
@@ -2145,6 +2461,7 @@ private:
     std::filesystem::path path_;
     std::size_t position_ = 0;
     std::unordered_map<std::string, Value> variables_;
+    std::unordered_set<std::string> moved_variables_;
     std::unordered_set<std::string> constants_;
     std::unordered_map<std::string, FunctionDef> functions_;
     std::unordered_set<std::string> loaded_modules_;

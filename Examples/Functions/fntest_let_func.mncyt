@@ -1,0 +1,7 @@
+﻿#external "fnmath"
+
+fn main[] -> Int32 {
+    let somaResult: Int32 = somar[10, 20];
+    print[somaResult];
+    return 0;
+}

@@ -1,4 +1,10 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
+
+function Run-FailFixture([string]$path, [string]$msg) {
+    $proc = Start-Process -FilePath $binary -ArgumentList "`"$path`"" -NoNewWindow -Wait -PassThru -RedirectStandardError "$env:TEMP\moon_err.log" -RedirectStandardOutput "$env:TEMP\moon_out.log"
+    if ($proc.ExitCode -eq 0) { throw $msg }
+    $null = $proc.ExitCode
+}
 
 $root = Split-Path -Parent $PSScriptRoot
 $binary = Join-Path $root "Test\mooncyt-smoke.exe"
@@ -49,28 +55,16 @@ if ($ast -notmatch "fn main\[\] -> Int32") { throw "AST de função falhou: $ast
 $elseIf = (& $binary "$PSScriptRoot\fixtures\else_if.mncyt" | Out-String).Trim()
 if ($elseIf -ne "two") { throw "else if falhou: $elseIf" }
 
-& $binary "$PSScriptRoot\fixtures\const_fail.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Reatribuição de const foi aceita" }
+Run-FailFixture "$PSScriptRoot\fixtures\const_fail.mncyt" "Reatribuição de const foi aceita"
+Run-FailFixture "$PSScriptRoot\fixtures\overflow_fail.mncyt" "Overflow de inteiro foi aceito"
+Run-FailFixture "$PSScriptRoot\fixtures\type_fail.mncyt" "Valor incompatível foi aceito"
+Run-FailFixture "$PSScriptRoot\fixtures\integer_range_fail.mncyt" "Valor fora da faixa foi aceito"
+Run-FailFixture "$PSScriptRoot\fixtures\invalid_function.mncyt" "Função malformada foi aceita"
+Run-FailFixture "$PSScriptRoot\fixtures\duplicate_function.mncyt" "Funções duplicadas foram aceitas"
 
-& $binary "$PSScriptRoot\fixtures\overflow_fail.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Overflow de inteiro foi aceito" }
+$procExit = Start-Process -FilePath $binary -ArgumentList "`"$PSScriptRoot\fixtures\exit_code.mncyt`"" -NoNewWindow -Wait -PassThru -RedirectStandardError "$env:TEMP\moon_err.log" -RedirectStandardOutput "$env:TEMP\moon_out.log"
+if ($procExit.ExitCode -ne 7) { throw "Código de saída de main falhou: $($procExit.ExitCode)" }
 
-& $binary "$PSScriptRoot\fixtures\type_fail.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Valor incompatível foi aceito" }
-
-& $binary "$PSScriptRoot\fixtures\integer_range_fail.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Valor fora da faixa foi aceito" }
-
-& $binary "$PSScriptRoot\fixtures\invalid_function.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Função malformada foi aceita" }
-
-& $binary "$PSScriptRoot\fixtures\duplicate_function.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Funções duplicadas foram aceitas" }
-
-& $binary "$PSScriptRoot\fixtures\exit_code.mncyt" 2>$null
-if ($LASTEXITCODE -ne 7) { throw "Código de saída de main falhou: $LASTEXITCODE" }
-
-& $binary "$PSScriptRoot\fixtures\old_call_syntax.mncyt" 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Sintaxe antiga foi aceita" }
+Run-FailFixture "$PSScriptRoot\fixtures\old_call_syntax.mncyt" "Sintaxe antiga foi aceita"
 
 Write-Host "MoonCrypto smoke tests: OK"

@@ -1,0 +1,3 @@
+C:/Users/Gustavo Pertum/Downloads/MoonCryptoRepo-mainJson/MoonCryptoRepo-main/build/CMakeFiles/mooncyt.dir
+C:/Users/Gustavo Pertum/Downloads/MoonCryptoRepo-mainJson/MoonCryptoRepo-main/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Gustavo Pertum/Downloads/MoonCryptoRepo-mainJson/MoonCryptoRepo-main/build/CMakeFiles/ZERO_CHECK.dir

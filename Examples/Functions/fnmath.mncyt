@@ -1,0 +1,12 @@
+fn somar[a: Int32, b: Int32] -> Int32 {
+    return a + b;
+}
+
+fn multiplicar[a: Int32, b: Int32] -> Int32 {
+    return a * b;
+}
+
+fn saudar[nome: String32] -> Int32 {
+    print["Olá, " + nome + "! Módulo externo carregado com sucesso."];
+    return 0;
+}

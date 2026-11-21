@@ -1,0 +1,11 @@
+fn falar[a: String32] -> Int32 {
+    if (a == "oi"){
+        print["Olá, tudo bem?"];
+    }
+    
+    if (a == "tchau") {
+        print["Tchau, até mais!"];
+    } 
+    
+    
+}
