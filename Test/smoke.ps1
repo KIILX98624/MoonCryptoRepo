@@ -16,6 +16,15 @@ if ($crypto -ne "sha-84cfbae28e7ce7e83d00e8ff8b4278c2385dbeecf7149b89287d94f8dfd
 $bytes = (& $binary "$PSScriptRoot\fixtures\bytes.mncyt" | Out-String).Trim()
 if ($bytes -notmatch "byte-0=1" -or $bytes -notmatch "byte-2=255") { throw "Bytes falhou: $bytes" }
 
+$json = (& $binary "$PSScriptRoot\fixtures\json.mncyt" | Out-String).Trim()
+if ($json -notmatch "json-active=true" -or
+    $json -notmatch "json-name=MoonCrypto" -or
+    $json -notmatch "json-version=2" -or
+    $json -notmatch 'json-array=\[7,9\]' -or
+    $json -notmatch 'json-object=\{"lista":\[7,9\],"nome":"MoonCrypto","versao":2\}') {
+    throw "JSON module falhou: $json"
+}
+
 $bool = (& $binary "$PSScriptRoot\fixtures\bool.mncyt" | Out-String).Trim()
 if ($bool -ne "bool-ok") { throw "Bool falhou: $bool" }
 
