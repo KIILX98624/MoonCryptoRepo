@@ -6,7 +6,7 @@
 
 **Status:** proposta para revisão. A execução nativa, ownership verificado pelo compilador, suporte a Git e prioridades de portabilidade e interoperabilidade com C++ estão definidos como direção. O tratamento de erros continua em aberto.
 
-> **Estado do repositório:** protótipo nativo em C++20. `moon entry` resolve o arquivo de entrada e `moon run` interpreta o subconjunto validado da linguagem `.mncyt`; o comando `mooncyt arquivo.mncyt` é a interface direta recomendada.
+> **Estado do repositório:** protótipo nativo em C++20. `mooncyt {name}` resolve o arquivo de entrada e `moon run` interpreta o subconjunto validado da linguagem `.mncyt`; o comando `mooncyt arquivo.mncyt` é a interface direta recomendada.
 
 ### VS Code
 
