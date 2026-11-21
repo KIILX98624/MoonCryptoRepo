@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <map>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -46,12 +47,278 @@ void print_usage() {
               << "  moon --help\n";
 }
 
+
+struct JsonNode {
+    enum class Type { Null, Boolean, Number, String, Array, Object };
+    Type type = Type::Null;
+    bool boolean_value = false;
+    std::string scalar;
+    std::vector<std::shared_ptr<JsonNode>> array;
+    std::map<std::string, std::shared_ptr<JsonNode>> object;
+};
+
+std::shared_ptr<JsonNode> make_json_null() {
+    return std::make_shared<JsonNode>();
+}
+
+std::string json_quote(const std::string& value) {
+    std::ostringstream out;
+    out << '"';
+    for (unsigned char c : value) {
+        switch (c) {
+            case '"': out << "\\\""; break;
+            case '\\': out << "\\\\"; break;
+            case '\b': out << "\\b"; break;
+            case '\f': out << "\\f"; break;
+            case '\n': out << "\\n"; break;
+            case '\r': out << "\\r"; break;
+            case '\t': out << "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    out << "\\u" << std::hex << std::setw(4) << std::setfill('0')
+                        << static_cast<unsigned>(c) << std::dec;
+                } else out << static_cast<char>(c);
+        }
+    }
+    out << '"';
+    return out.str();
+}
+
+std::string json_serialize(const std::shared_ptr<JsonNode>& node) {
+    if (!node) return "null";
+    switch (node->type) {
+        case JsonNode::Type::Null: return "null";
+        case JsonNode::Type::Boolean: return node->boolean_value ? "true" : "false";
+        case JsonNode::Type::Number: return node->scalar;
+        case JsonNode::Type::String: return json_quote(node->scalar);
+        case JsonNode::Type::Array: {
+            std::string out = "[";
+            for (std::size_t i = 0; i < node->array.size(); ++i) {
+                if (i) out += ",";
+                out += json_serialize(node->array[i]);
+            }
+            return out + "]";
+        }
+        case JsonNode::Type::Object: {
+            std::string out = "{";
+            bool first = true;
+            for (const auto& entry : node->object) {
+                if (!first) out += ",";
+                first = false;
+                out += json_quote(entry.first) + ":" + json_serialize(entry.second);
+            }
+            return out + "}";
+        }
+    }
+    return "null";
+}
+
+class JsonParser {
+public:
+    explicit JsonParser(const std::string& input) : input_(input) {}
+
+    std::shared_ptr<JsonNode> parse() {
+        skip_space();
+        auto result = parse_value(0);
+        skip_space();
+        if (!result || position_ != input_.size()) return nullptr;
+        return result;
+    }
+
+private:
+    const std::string& input_;
+    std::size_t position_ = 0;
+
+    void skip_space() {
+        while (position_ < input_.size() &&
+               (input_[position_] == ' ' || input_[position_] == '\n' ||
+                input_[position_] == '\r' || input_[position_] == '\t')) ++position_;
+    }
+
+    static void append_utf8(std::string& out, unsigned int cp) {
+        if (cp <= 0x7F) out.push_back(static_cast<char>(cp));
+        else if (cp <= 0x7FF) {
+            out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        } else if (cp <= 0xFFFF) {
+            out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+            out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        } else {
+            out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+            out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+    }
+
+    bool read_hex4(unsigned int& value) {
+        if (position_ + 4 > input_.size()) return false;
+        value = 0;
+        for (int i = 0; i < 4; ++i) {
+            const char c = input_[position_++];
+            value <<= 4;
+            if (c >= '0' && c <= '9') value |= static_cast<unsigned>(c - '0');
+            else if (c >= 'a' && c <= 'f') value |= static_cast<unsigned>(c - 'a' + 10);
+            else if (c >= 'A' && c <= 'F') value |= static_cast<unsigned>(c - 'A' + 10);
+            else return false;
+        }
+        return true;
+    }
+
+    std::optional<std::string> parse_string() {
+        if (position_ >= input_.size() || input_[position_++] != '"') return std::nullopt;
+        std::string out;
+        while (position_ < input_.size()) {
+            const unsigned char c = static_cast<unsigned char>(input_[position_++]);
+            if (c == '"') return out;
+            if (c < 0x20) return std::nullopt;
+            if (c != '\\') {
+                out.push_back(static_cast<char>(c));
+                continue;
+            }
+            if (position_ >= input_.size()) return std::nullopt;
+            const char escaped = input_[position_++];
+            switch (escaped) {
+                case '"': out.push_back('"'); break;
+                case '\\': out.push_back('\\'); break;
+                case '/': out.push_back('/'); break;
+                case 'b': out.push_back('\b'); break;
+                case 'f': out.push_back('\f'); break;
+                case 'n': out.push_back('\n'); break;
+                case 'r': out.push_back('\r'); break;
+                case 't': out.push_back('\t'); break;
+                case 'u': {
+                    unsigned int cp = 0;
+                    if (!read_hex4(cp)) return std::nullopt;
+                    if (cp >= 0xD800 && cp <= 0xDBFF) {
+                        if (position_ + 2 > input_.size() || input_[position_] != '\\' || input_[position_ + 1] != 'u') return std::nullopt;
+                        position_ += 2;
+                        unsigned int low = 0;
+                        if (!read_hex4(low) || low < 0xDC00 || low > 0xDFFF) return std::nullopt;
+                        cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
+                    } else if (cp >= 0xDC00 && cp <= 0xDFFF) return std::nullopt;
+                    append_utf8(out, cp);
+                    break;
+                }
+                default: return std::nullopt;
+            }
+        }
+        return std::nullopt;
+    }
+
+    std::shared_ptr<JsonNode> parse_value(unsigned depth) {
+        if (depth > 128 || position_ >= input_.size()) return nullptr;
+        skip_space();
+        if (position_ >= input_.size()) return nullptr;
+        const char c = input_[position_];
+
+        if (c == '"') {
+            auto text = parse_string();
+            if (!text) return nullptr;
+            auto node = std::make_shared<JsonNode>();
+            node->type = JsonNode::Type::String;
+            node->scalar = std::move(*text);
+            return node;
+        }
+        if (c == '{') {
+            ++position_;
+            auto node = std::make_shared<JsonNode>();
+            node->type = JsonNode::Type::Object;
+            skip_space();
+            if (position_ < input_.size() && input_[position_] == '}') { ++position_; return node; }
+            while (position_ < input_.size()) {
+                skip_space();
+                auto key = parse_string();
+                if (!key) return nullptr;
+                skip_space();
+                if (position_ >= input_.size() || input_[position_++] != ':') return nullptr;
+                auto value = parse_value(depth + 1);
+                if (!value) return nullptr;
+                node->object[*key] = std::move(value);
+                skip_space();
+                if (position_ < input_.size() && input_[position_] == '}') { ++position_; return node; }
+                if (position_ >= input_.size() || input_[position_++] != ',') return nullptr;
+            }
+            return nullptr;
+        }
+        if (c == '[') {
+            ++position_;
+            auto node = std::make_shared<JsonNode>();
+            node->type = JsonNode::Type::Array;
+            skip_space();
+            if (position_ < input_.size() && input_[position_] == ']') { ++position_; return node; }
+            while (position_ < input_.size()) {
+                auto value = parse_value(depth + 1);
+                if (!value) return nullptr;
+                node->array.push_back(std::move(value));
+                skip_space();
+                if (position_ < input_.size() && input_[position_] == ']') { ++position_; return node; }
+                if (position_ >= input_.size() || input_[position_++] != ',') return nullptr;
+            }
+            return nullptr;
+        }
+        if (input_.compare(position_, 4, "true") == 0 || input_.compare(position_, 5, "false") == 0) {
+            auto node = std::make_shared<JsonNode>();
+            node->type = JsonNode::Type::Boolean;
+            node->boolean_value = input_[position_] == 't';
+            position_ += node->boolean_value ? 4 : 5;
+            return node;
+        }
+        if (input_.compare(position_, 4, "null") == 0) {
+            position_ += 4;
+            return make_json_null();
+        }
+
+        const std::size_t start = position_;
+        if (input_[position_] == '-') ++position_;
+        if (position_ >= input_.size()) return nullptr;
+        if (input_[position_] == '0') ++position_;
+        else {
+            if (input_[position_] < '1' || input_[position_] > '9') return nullptr;
+            while (position_ < input_.size() && input_[position_] >= '0' && input_[position_] <= '9') ++position_;
+        }
+        if (position_ < input_.size() && input_[position_] == '.') {
+            ++position_;
+            const auto fraction = position_;
+            while (position_ < input_.size() && input_[position_] >= '0' && input_[position_] <= '9') ++position_;
+            if (fraction == position_) return nullptr;
+        }
+        if (position_ < input_.size() && (input_[position_] == 'e' || input_[position_] == 'E')) {
+            ++position_;
+            if (position_ < input_.size() && (input_[position_] == '+' || input_[position_] == '-')) ++position_;
+            const auto exponent = position_;
+            while (position_ < input_.size() && input_[position_] >= '0' && input_[position_] <= '9') ++position_;
+            if (exponent == position_) return nullptr;
+        }
+        auto node = std::make_shared<JsonNode>();
+        node->type = JsonNode::Type::Number;
+        node->scalar = input_.substr(start, position_ - start);
+        return node;
+    }
+};
+
+std::string json_type_name(const std::shared_ptr<JsonNode>& node) {
+    if (!node) return "null";
+    switch (node->type) {
+        case JsonNode::Type::Null: return "null";
+        case JsonNode::Type::Boolean: return "boolean";
+        case JsonNode::Type::Number: return "number";
+        case JsonNode::Type::String: return "string";
+        case JsonNode::Type::Array: return "array";
+        case JsonNode::Type::Object: return "object";
+    }
+    return "null";
+}
+
+
 enum class ValueKind {
     Integer,
     String,
     Char,
     Boolean,
     Bytes,
+    Json,
     Result
 };
 
@@ -63,6 +330,7 @@ struct Value {
     char char_val = '\0';
     bool bool_val = false;
     std::vector<unsigned char> bytes_val;
+    std::shared_ptr<JsonNode> json_val;
     bool result_ok = false;
     std::shared_ptr<Value> result_value;
 
@@ -106,6 +374,14 @@ struct Value {
         return val;
     }
 
+    static Value make_json(std::shared_ptr<JsonNode> value) {
+        Value val;
+        val.kind = ValueKind::Json;
+        val.type_name = "JsonValue";
+        val.json_val = std::move(value);
+        return val;
+    }
+
     static Value make_result_ok(Value value) {
         Value result;
         result.kind = ValueKind::Result;
@@ -135,6 +411,7 @@ struct Value {
                 for (const auto byte : bytes_val) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
                 return out.str();
             }
+            case ValueKind::Json: return json_serialize(json_val);
             case ValueKind::Result:
                 return result_value ? result_value->to_string() : "";
         }
@@ -203,6 +480,7 @@ bool value_matches_type(const Value& value, const std::string& type_name) {
     if (type_name == "Char") return value.kind == ValueKind::Char;
     if (type_name == "String" || type_name == "String32" || type_name == "String64") return value.kind == ValueKind::String;
     if (type_name == "Bytes") return value.kind == ValueKind::Bytes;
+    if (type_name == "Json" || type_name == "JsonValue") return value.kind == ValueKind::Json;
     if (type_name == "Result" || type_name.rfind("Result<", 0) == 0) return value.kind == ValueKind::Result;
     if (type_name.rfind("Int", 0) == 0 || type_name.rfind("UInt", 0) == 0) {
         if (value.kind != ValueKind::Integer) return false;
@@ -441,6 +719,12 @@ private:
         }
         trim(path_str);
         if (path_str.empty()) return fail("empty path in #external");
+
+        // "json" é um módulo nativo do interpretador, não um arquivo .mncyt.
+        if (path_str == "json" || path_str == "json.mncyt") {
+            loaded_modules_.insert("@builtin:json");
+            return true;
+        }
 
         std::filesystem::path target = path_str;
         std::filesystem::path resolved;
@@ -1012,6 +1296,31 @@ private:
             if (value) return Value::make_string(value->to_string());
         }
 
+        if (text.size() > 12 && text.substr(text.size() - 12) == ".as_string[]") {
+            auto value = evaluate_expression(text.substr(0, text.size() - 12));
+            if (value && value->kind == ValueKind::Json && value->json_val &&
+                value->json_val->type == JsonNode::Type::String) return Value::make_string(value->json_val->scalar);
+            return std::nullopt;
+        }
+        if (text.size() > 9 && text.substr(text.size() - 9) == ".as_int[]") {
+            auto value = evaluate_expression(text.substr(0, text.size() - 9));
+            if (value && value->kind == ValueKind::Json && value->json_val &&
+                value->json_val->type == JsonNode::Type::Number) {
+                try {
+                    std::size_t used = 0;
+                    const auto number = std::stoll(value->json_val->scalar, &used);
+                    if (used == value->json_val->scalar.size()) return Value::make_int(number);
+                } catch (...) {}
+            }
+            return std::nullopt;
+        }
+        if (text.size() > 10 && text.substr(text.size() - 10) == ".as_bool[]") {
+            auto value = evaluate_expression(text.substr(0, text.size() - 10));
+            if (value && value->kind == ValueKind::Json && value->json_val &&
+                value->json_val->type == JsonNode::Type::Boolean) return Value::make_bool(value->json_val->boolean_value);
+            return std::nullopt;
+        }
+
         auto unesc = unescape_string(text);
         if (unesc) {
             return Value::make_string(*unesc);
@@ -1049,8 +1358,116 @@ private:
         // Check for function call: name[...] or name(...)
         const auto open_pos = text.find('[');
         if (open_pos != std::string::npos && text.back() == ']') {
+            const std::string arg_content = text.substr(open_pos + 1, text.size() - open_pos - 2);
             std::string fn_name = text.substr(0, open_pos);
             trim(fn_name);
+
+            if (fn_name == "json.parse") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1 || args[0].kind != ValueKind::String || args[0].str_val.size() > 8 * 1024 * 1024) return std::nullopt;
+                JsonParser parser(args[0].str_val);
+                auto parsed = parser.parse();
+                if (!parsed) return std::nullopt;
+                return Value::make_json(std::move(parsed));
+            }
+            if (fn_name == "json.stringify") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1 || args[0].kind != ValueKind::Json) return std::nullopt;
+                return Value::make_string(json_serialize(args[0].json_val));
+            }
+            if (fn_name == "json.type") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1 || args[0].kind != ValueKind::Json) return std::nullopt;
+                return Value::make_string(json_type_name(args[0].json_val));
+            }
+            if (fn_name == "json.length") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1 || args[0].kind != ValueKind::Json || !args[0].json_val) return std::nullopt;
+                const auto& node = args[0].json_val;
+                if (node->type == JsonNode::Type::Array) return Value::make_int(static_cast<long long>(node->array.size()));
+                if (node->type == JsonNode::Type::Object) return Value::make_int(static_cast<long long>(node->object.size()));
+                if (node->type == JsonNode::Type::String) return Value::make_int(static_cast<long long>(node->scalar.size()));
+                return Value::make_int(0);
+            }
+            if (fn_name == "json.get") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 2 || args[0].kind != ValueKind::Json || !args[0].json_val) return std::nullopt;
+                const auto& node = args[0].json_val;
+                if (node->type == JsonNode::Type::Object && args[1].kind == ValueKind::String) {
+                    auto found = node->object.find(args[1].str_val);
+                    if (found != node->object.end()) return Value::make_json(found->second);
+                }
+                if (node->type == JsonNode::Type::Array && args[1].kind == ValueKind::Integer &&
+                    args[1].int_val >= 0 && static_cast<std::size_t>(args[1].int_val) < node->array.size()) {
+                    return Value::make_json(node->array[static_cast<std::size_t>(args[1].int_val)]);
+                }
+                return std::nullopt;
+            }
+            if (fn_name == "json.has") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 2 || args[0].kind != ValueKind::Json || !args[0].json_val ||
+                    args[0].json_val->type != JsonNode::Type::Object || args[1].kind != ValueKind::String) return std::nullopt;
+                return Value::make_bool(args[0].json_val->object.find(args[1].str_val) != args[0].json_val->object.end());
+            }
+            if (fn_name == "json.new_object" || fn_name == "json.new_array" || fn_name == "json.null") {
+                if (!arg_content.empty()) return std::nullopt;
+                auto node = std::make_shared<JsonNode>();
+                if (fn_name == "json.new_object") node->type = JsonNode::Type::Object;
+                else if (fn_name == "json.new_array") node->type = JsonNode::Type::Array;
+                return Value::make_json(std::move(node));
+            }
+            if (fn_name == "json.from_string" || fn_name == "json.from_int" || fn_name == "json.from_bool") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1) return std::nullopt;
+                auto node = std::make_shared<JsonNode>();
+                if (fn_name == "json.from_string" && args[0].kind == ValueKind::String) {
+                    node->type = JsonNode::Type::String; node->scalar = args[0].str_val;
+                } else if (fn_name == "json.from_int" && args[0].kind == ValueKind::Integer) {
+                    node->type = JsonNode::Type::Number; node->scalar = std::to_string(args[0].int_val);
+                } else if (fn_name == "json.from_bool" && args[0].kind == ValueKind::Boolean) {
+                    node->type = JsonNode::Type::Boolean; node->boolean_value = args[0].bool_val;
+                } else return std::nullopt;
+                return Value::make_json(std::move(node));
+            }
+            if (fn_name == "json.set") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 3 || args[0].kind != ValueKind::Json || !args[0].json_val ||
+                    args[0].json_val->type != JsonNode::Type::Object || args[1].kind != ValueKind::String ||
+                    args[2].kind != ValueKind::Json) return std::nullopt;
+                args[0].json_val->object[args[1].str_val] = args[2].json_val;
+                return Value::make_bool(true);
+            }
+            if (fn_name == "json.push") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 2 || args[0].kind != ValueKind::Json || !args[0].json_val ||
+                    args[0].json_val->type != JsonNode::Type::Array || args[1].kind != ValueKind::Json) return std::nullopt;
+                args[0].json_val->array.push_back(args[1].json_val);
+                return Value::make_bool(true);
+            }
+            if (fn_name == "json.read") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1 || args[0].kind != ValueKind::String) return std::nullopt;
+                std::ifstream file(args[0].str_val, std::ios::binary);
+                if (!file) return std::nullopt;
+                std::ostringstream buffer; buffer << file.rdbuf();
+                const std::string contents = buffer.str();
+                if (contents.size() > 8 * 1024 * 1024) return std::nullopt;
+                JsonParser parser(contents);
+                auto parsed = parser.parse();
+                if (!parsed) return std::nullopt;
+                return Value::make_json(std::move(parsed));
+            }
+            if (fn_name == "json.write") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 2 || args[0].kind != ValueKind::String || args[1].kind != ValueKind::Json) return std::nullopt;
+                std::ofstream file(args[0].str_val, std::ios::binary | std::ios::trunc);
+                if (!file) return std::nullopt;
+                const std::string output = json_serialize(args[1].json_val);
+                file.write(output.data(), static_cast<std::streamsize>(output.size()));
+                if (!file) return std::nullopt;
+                return Value::make_bool(true);
+            }
+
             if (fn_name == "crypto.sha256") {
                 auto arg = evaluate_expression(text.substr(open_pos + 1, text.size() - open_pos - 2));
                 if (!arg) return std::nullopt;
@@ -1079,7 +1496,6 @@ private:
                 return Value::make_int(variable->second.bytes_val[static_cast<std::size_t>(*index)], "UInt8");
             }
             if (functions_.find(fn_name) != functions_.end()) {
-                std::string arg_content = text.substr(open_pos + 1, text.size() - open_pos - 2);
                 auto args = parse_argument_list(arg_content);
                 return call_function(fn_name, args);
             }
