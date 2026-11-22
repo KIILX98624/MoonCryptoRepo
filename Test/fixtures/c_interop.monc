@@ -12,6 +12,8 @@
         int atoi(char* text);
         int rand(void);
         void srand(unsigned int seed);
+        void* malloc(size_t size);
+        void free(void* ptr);
     }
 }
 
@@ -36,5 +38,10 @@ fn main[] -> Int32 {
     print["rand_first=" + random_first];
     print["rand_second=" + random_second];
     print["rand_different_seed=" + random_different_seed];
+
+    let memory = malloc(64);
+    free(memory);
+    free(NULL);
+    print["malloc_free_NULL=ok"];
     return 0;
 }
