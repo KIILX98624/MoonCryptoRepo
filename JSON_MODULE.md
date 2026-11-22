@@ -27,13 +27,13 @@ O formato deve seguir a especificação JSON (RFC 8259), usando UTF-8 para arqui
 
 A importação proposta segue o padrão de módulo qualificado:
 
-```mncyt
+```monc
 use json
 ```
 
 Todas as chamadas usam colchetes, seguindo a regra atual da MoonCrypto:
 
-```mncyt
+```monc
 json.parse[texto]
 json.stringify[valor]
 json.read["dados.json"]
@@ -65,7 +65,7 @@ A representação interna pode usar uma biblioteca C++ consolidada, mas detalhes
 
 ### 4.1 Interpretar texto
 
-```mncyt
+```monc
 let valor: JsonValue = json.parse[texto];
 ```
 
@@ -76,7 +76,7 @@ let valor: JsonValue = json.parse[texto];
 
 ### 4.2 Serializar
 
-```mncyt
+```monc
 let texto: String32 = json.stringify[valor];
 ```
 
@@ -90,7 +90,7 @@ Uma opção de formatação pode ser adicionada depois, por exemplo `json.string
 
 ### 4.3 Ler arquivo
 
-```mncyt
+```monc
 let dados: JsonValue = json.read["conversor.json"];
 ```
 
@@ -101,7 +101,7 @@ let dados: JsonValue = json.read["conversor.json"];
 
 ### 4.4 Gravar arquivo
 
-```mncyt
+```monc
 json.write["conversor.json", dados];
 ```
 
@@ -115,7 +115,7 @@ json.write["conversor.json", dados];
 
 Construtores propostos:
 
-```mncyt
+```monc
 let objeto: JsonValue = json.object[];
 let lista: JsonValue = json.array[];
 let texto: JsonValue = json.string["MoonCrypto"];
@@ -128,7 +128,7 @@ A conversão numérica deve rejeitar valores não finitos (`NaN`, infinito posit
 
 ### 4.6 Consultar e alterar objetos
 
-```mncyt
+```monc
 json.set[objeto, "nome", json.string["MoonCrypto"]];
 let nome: JsonValue = json.get[objeto, "nome"];
 let existe: Bool = json.has[objeto, "nome"];
@@ -145,7 +145,7 @@ Regras:
 
 ### 4.7 Consultar e alterar arrays
 
-```mncyt
+```monc
 json.push[lista, json.number[10]];
 let item: JsonValue = json.at[lista, 0];
 let quantidade: UInt64 = json.length[lista];
@@ -162,7 +162,7 @@ Regras:
 
 Para evitar conversões implícitas e erros silenciosos, oferecer funções explícitas:
 
-```mncyt
+```monc
 let nome: String32 = json.as_string[json.get[dados, "nome"]];
 let idade: Int32 = json.as_int32[json.get[dados, "idade"]];
 let ativo: Bool = json.as_bool[json.get[dados, "ativo"]];
@@ -175,7 +175,7 @@ Essas conversões devem falhar se o tipo JSON não for compatível ou se o núme
 
 Também podem existir verificações sem conversão:
 
-```mncyt
+```monc
 json.is_object[valor]
 json.is_array[valor]
 json.is_string[valor]
@@ -222,7 +222,7 @@ with open("conversor.json", "w", encoding="utf-8") as arquivo:
 
 A MoonCrypto deve conseguir ler esse arquivo com:
 
-```mncyt
+```monc
 use json
 
 fn main[] -> Int32 {
