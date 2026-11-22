@@ -26,6 +26,7 @@ struct Parser {
         result.column = current().column;
         return false;
     }
+
     bool parse_function() {
         if (!take(TokenKind::Identifier, "fn")) return fail("expected fn");
         if (!is(TokenKind::Identifier)) return fail("expected function name");
@@ -66,106 +67,138 @@ struct Parser {
         result.program.functions.push_back(std::move(function));
         return true;
     }
-    
-AstResult run() {
-    while (!is(TokenKind::EndOfFile)) {
-        if (is(TokenKind::Identifier, "fn")) {
-            if (!parse_function()) return result;
 
-        } else if (is(TokenKind::Identifier, "const")) {
-            ++index;
+    bool parse_c_function(ExternalNode& external) {
+        if (!is(TokenKind::Identifier)) return fail("expected C return type in playCodeC block");
+        CFunctionNode function;
+        function.return_type = current().text;
+        ++index;
 
-            if (!is(TokenKind::Identifier)) {
-                fail("expected constant identifier");
-                return result;
-            }
+        if (!is(TokenKind::Identifier)) return fail("expected C function name");
+        function.name = current().text;
+        ++index;
+        if (!take(TokenKind::Symbol, "(")) return fail("expected '(' after C function name");
 
-            std::string cname = current().text;
-            ++index;
-
-            std::string ctype = "Inferred";
-
-            if (take(TokenKind::Symbol, ":")) {
-                if (!is(TokenKind::Identifier)) {
-                    fail("expected constant type");
-                    return result;
-                }
-
-                ctype = current().text;
+        if (!is(TokenKind::Symbol, ")")) {
+            while (true) {
+                if (!is(TokenKind::Identifier)) return fail("expected C parameter type");
+                CParameterNode parameter;
+                parameter.type = current().text;
                 ++index;
-            }
-
-            result.program.constants.push_back({
-                std::move(cname),
-                std::move(ctype)
-            });
-
-            while (!is(TokenKind::EndOfFile) &&
-                   !take(TokenKind::Symbol, ";")) {
+                if (!is(TokenKind::Identifier)) return fail("expected C parameter name");
+                parameter.name = current().text;
                 ++index;
+                function.parameters.push_back(std::move(parameter));
+
+                if (take(TokenKind::Symbol, ")")) break;
+                if (!take(TokenKind::Symbol, ",")) return fail("expected ',' between C parameters");
             }
-
-        } else if (is(TokenKind::Identifier, "struct") ||
-                   is(TokenKind::Identifier, "class")) {
-
-            bool is_cls = current().text == "class";
-            ++index;
-
-            if (!is(TokenKind::Identifier)) {
-                fail("expected type identifier");
-                return result;
-            }
-
-            std::string sname = current().text;
-            ++index;
-
-            result.program.types.push_back({
-                std::move(sname), is_cls
-            });
-
-            if (take(TokenKind::Symbol, "{")) {
-                int depth = 1;
-
-                while (depth > 0 && !is(TokenKind::EndOfFile)) {
-                    if (take(TokenKind::Symbol, "{")) ++depth;
-                    else if (take(TokenKind::Symbol, "}")) --depth;
-                    else ++index;
-                }
-            }
-
-        } else if (is(TokenKind::Symbol, "#")) {
-            ++index;
-
-            if (is(TokenKind::Identifier, "external")) {
-                ++index;
-
-                if (is(TokenKind::String)) {
-                    std::string path = current().text;
-
-                    if (path.size() >= 2 &&
-                        path.front() == '"' &&
-                        path.back() == '"') {
-                        path = path.substr(1, path.size() - 2);
-                    }
-
-                    result.program.externals.push_back({
-                        std::move(path)
-                    });
-
-                    ++index;
-                }
-
-                take(TokenKind::Symbol, ";");
-            }
-
         } else {
             ++index;
         }
+
+        take(TokenKind::Symbol, ";");
+        external.c_functions.push_back(std::move(function));
+        return true;
     }
 
-    return result;
-}
+    bool parse_external() {
+        if (!take(TokenKind::Symbol, "#") ||
+            !take(TokenKind::Identifier, "external")) return fail("expected #external");
+        if (!is(TokenKind::String)) return fail("expected header path after #external");
 
+        ExternalNode external;
+        external.path = current().text;
+        if (external.path.size() >= 2 && external.path.front() == '"' && external.path.back() == '"') {
+            external.path = external.path.substr(1, external.path.size() - 2);
+        }
+        ++index;
+
+        if (take(TokenKind::Symbol, ";")) {
+            result.program.externals.push_back(std::move(external));
+            return true;
+        }
+
+        if (!take(TokenKind::Symbol, "{")) {
+            result.program.externals.push_back(std::move(external));
+            return true;
+        }
+
+        bool found_play_code = false;
+        while (!is(TokenKind::EndOfFile) && !is(TokenKind::Symbol, "}")) {
+            if (is(TokenKind::Identifier, "playCodeC")) {
+                ++index;
+                if (!take(TokenKind::Symbol, "{")) return fail("expected '{' after playCodeC");
+                found_play_code = true;
+                while (!is(TokenKind::EndOfFile) && !is(TokenKind::Symbol, "}")) {
+                    if (!parse_c_function(external)) return false;
+                }
+                if (!take(TokenKind::Symbol, "}")) return fail("unterminated playCodeC block");
+            } else {
+                return fail("expected playCodeC block inside #external");
+            }
+        }
+
+        if (!take(TokenKind::Symbol, "}")) return fail("unterminated #external block");
+        if (!found_play_code) return fail("#external block must contain playCodeC");
+        result.program.externals.push_back(std::move(external));
+        return true;
+    }
+
+    AstResult run() {
+        while (!is(TokenKind::EndOfFile)) {
+            if (is(TokenKind::Identifier, "fn")) {
+                if (!parse_function()) return result;
+            } else if (is(TokenKind::Identifier, "const")) {
+                ++index;
+                if (!is(TokenKind::Identifier)) {
+                    fail("expected constant identifier");
+                    return result;
+                }
+                std::string cname = current().text;
+                ++index;
+                std::string ctype = "Inferred";
+                if (take(TokenKind::Symbol, ":")) {
+                    if (!is(TokenKind::Identifier)) {
+                        fail("expected constant type");
+                        return result;
+                    }
+                    ctype = current().text;
+                    ++index;
+                }
+                result.program.constants.push_back({std::move(cname), std::move(ctype)});
+                while (!is(TokenKind::EndOfFile) && !take(TokenKind::Symbol, ";")) ++index;
+            } else if (is(TokenKind::Identifier, "struct") || is(TokenKind::Identifier, "class")) {
+                bool is_cls = current().text == "class";
+                ++index;
+                if (!is(TokenKind::Identifier)) {
+                    fail("expected type identifier");
+                    return result;
+                }
+                std::string sname = current().text;
+                ++index;
+                result.program.types.push_back({std::move(sname), is_cls});
+                if (take(TokenKind::Symbol, "{")) {
+                    int depth = 1;
+                    while (depth > 0 && !is(TokenKind::EndOfFile)) {
+                        if (take(TokenKind::Symbol, "{")) ++depth;
+                        else if (take(TokenKind::Symbol, "}")) --depth;
+                        else ++index;
+                    }
+                }
+            } else if (is(TokenKind::Symbol, "#")) {
+                if (index + 1 < tokens.size() && tokens[index + 1].kind == TokenKind::Identifier &&
+                    tokens[index + 1].text == "external") {
+                    if (!parse_external()) return result;
+                } else {
+                    ++index;
+                }
+            } else {
+                ++index;
+            }
+        }
+        return result;
+    }
 };
 
 } // namespace

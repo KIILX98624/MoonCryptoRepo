@@ -27,8 +27,20 @@ struct StructNode {
     bool is_class = false;
 };
 
+struct CParameterNode {
+    std::string name;
+    std::string type;
+};
+
+struct CFunctionNode {
+    std::string name;
+    std::string return_type;
+    std::vector<CParameterNode> parameters;
+};
+
 struct ExternalNode {
     std::string path;
+    std::vector<CFunctionNode> c_functions;
 };
 
 struct ProgramNode {
