@@ -260,6 +260,13 @@ moon run examples\while
 5. Biblioteca criptográfica oficial com APIs de alto nível.
 6. Diagnósticos completos no VS Code.
 
+## Arrays nativos
+
+
+> **Nota de modificação (2026-11-21):** o protótipo agora inclui a API inicial de arrays `Array<T>`. É possível criar com `Array[...]`, acessar por índice (`itens[0]`) e usar `array.push`, `array.pop`, `array.get`, `array.set`, `array.remove`, `array.clear` e `array.length`. A tipagem genérica é validada no interpretador, mas generics completos e ownership ainda não estão implementados.
+
+Exemplo: `let numeros: Array<Int32> = Array[10, 20, 30];`
+
 ## Bytes
 
 O protótipo já cria e indexa sequências de bytes:
