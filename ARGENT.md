@@ -69,8 +69,8 @@ No Windows com g++ disponível:
 
 ```powershell
 g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp -o monc.exe
-.\moon.exe entry examples\hello
-.\moon.exe run examples\hello
+.\monc.exe entry examples\hello
+.\monc.exe run examples\hello\main.monc
 ```
 
 O comando `run` deve imprimir:
