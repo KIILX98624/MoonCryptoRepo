@@ -19,7 +19,7 @@ let resultado: Float64 = sqrt(25.0);
 print[resultado];
 ```
 
-O parser AST nesta etapa reconhece o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. As declarações são armazenadas em `ExternalNode::c_functions` e ainda não são vinculadas nem executadas.
+O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. A implementação mapeia `math.h` para a biblioteca matemática nativa e `stdlib.h` para a biblioteca C padrão do sistema. Chamadas `float`/`double` e, agora, `int` com até dois argumentos homogêneos são resolvidas dinamicamente.
 
 ## Tipos numéricos
 
@@ -30,7 +30,7 @@ O parser AST nesta etapa reconhece o cabeçalho, o bloco `playCodeC`, os nomes d
 | `Float64` | IEEE-754 binary64 | `double` |
 | `Double64` | Alias de binary64 | `double` |
 
-Os aliases preservam compatibilidade de representação. A checagem de tipos e as conversões numéricas no interpretador ainda não estão implementadas nesta etapa.
+Os aliases preservam compatibilidade de representação. O runtime já armazena e opera com valores de ponto flutuante; a validação automatizada de compilação está sendo adicionada.
 
 ## Mapeamento C inicial
 
@@ -45,11 +45,11 @@ Os aliases preservam compatibilidade de representação. A checagem de tipos e a
 ## Estado da implementação
 
 1. **Lexer:** reconhece literais decimais e notação exponencial como tokens `float`.
-2. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
-3. **Interpretador:** ainda precisa armazenar valores float, avaliar operações aritméticas e validar `Float32`/ `Float64`/ aliases.
-4. **ABI/linker:** ainda precisa compilar ou vincular as bibliotecas nativas, resolver símbolos e converter argumentos/retornos com segurança.
-5. **Chamadas:** a sintaxe de chamadas C com parênteses será habilitada para símbolos declarados em `playCodeC`; as chamadas normais da MonC continuam usando colchetes.
+2. **Runtime Float:** armazena valores binary32/binary64, aplica os aliases e executa `+`, `-`, `*`, `/` e `%` em expressões de ponto flutuante. A suíte de smoke test inclui literais, aliases, operações e notação exponencial.
+3. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
+4. **Runtime C inicial:** chamadas com parênteses para protótipos `float`/`double` de `math.h`, com zero a dois parâmetros do mesmo tipo, são resolvidas por `LoadLibrary`/`GetProcAddress` no Windows ou `dlopen`/`dlsym` em sistemas POSIX.
+5. **Próximas melhorias da ABI:** suporte a `int`, `void`, parâmetros mistos, mais argumentos, bibliotecas definidas pelo usuário, ponteiros e validação mais abrangente da ABI.
 
 ## Limitações atuais
 
-O parser desta primeira etapa aceita protótipos simples com tipos e nomes de parâmetros. Não aceita ainda ponteiros, qualificadores (`const`), structs C, variádicas, macros, typedefs, callbacks, arrays C ou declarações complexas. A declaração de um protótipo não implica que o símbolo esteja disponível na linkedição.
+A etapa atual suporta `math.h` com retorno/parâmetros `float` ou `double`, e `stdlib.h` com retorno/parâmetros `int`, sempre com zero a dois parâmetros homogêneos. Ainda não aceita retorno `void`, ponteiros, qualificadores (`const`), structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias.

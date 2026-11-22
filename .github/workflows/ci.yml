@@ -1,0 +1,30 @@
+name: MonC CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/monc-float-runtime
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-ci-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build-ci
+
+      - name: Build
+        run: cmake --build build-ci --config Release
+
+      - name: Test
+        run: ctest --test-dir build-ci -C Release --output-on-failure

@@ -3,7 +3,9 @@
 #include "ast.hpp"
 
 #include <filesystem>
+#include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -28,6 +30,10 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#endif
+
+#ifndef _WIN32
+#include <dlfcn.h>
 #endif
 
 namespace {
@@ -318,6 +324,7 @@ std::string json_type_name(const std::shared_ptr<JsonNode>& node) {
 
 enum class ValueKind {
     Integer,
+    Float,
     String,
     Char,
     Boolean,
@@ -331,6 +338,7 @@ struct Value {
     ValueKind kind = ValueKind::Integer;
     std::string type_name = "Int32";
     long long int_val = 0;
+    double float_val = 0.0;
     std::string str_val;
     char char_val = '\0';
     bool bool_val = false;
@@ -346,6 +354,15 @@ struct Value {
         val.kind = ValueKind::Integer;
         val.type_name = std::move(type);
         val.int_val = v;
+        return val;
+    }
+
+    static Value make_float(double v, std::string type = "Float64") {
+        Value val;
+        val.kind = ValueKind::Float;
+        val.type_name = std::move(type);
+        val.float_val = val.type_name == "Float32" || val.type_name == "Double32"
+            ? static_cast<double>(static_cast<float>(v)) : v;
         return val;
     }
 
@@ -419,6 +436,12 @@ struct Value {
     std::string to_string() const {
         switch (kind) {
             case ValueKind::Integer: return std::to_string(int_val);
+            case ValueKind::Float: {
+                std::ostringstream out;
+                out << std::setprecision(type_name == "Float32" || type_name == "Double32" ? 7 : 15)
+                    << std::defaultfloat << float_val;
+                return out.str();
+            }
             case ValueKind::String: return str_val;
             case ValueKind::Char: return std::string(1, char_val);
             case ValueKind::Boolean: return bool_val ? "true" : "false";
@@ -450,6 +473,12 @@ struct FunctionDef {
     std::vector<std::pair<std::string, std::string>> params;
     std::string return_type = "Void";
     std::string body;
+};
+
+struct CFunctionBinding {
+    std::string header;
+    std::string return_type;
+    std::vector<std::string> parameter_types;
 };
 
 std::optional<long long> checked_add(long long a, long long b) {
@@ -502,6 +531,8 @@ std::optional<std::pair<long long, unsigned long long>> integer_type_range(const
 
 bool value_matches_type(const Value& value, const std::string& type_name) {
     if (type_name.empty() || type_name == "Inferred") return true;
+    if (type_name == "Float32" || type_name == "Double32" ||
+        type_name == "Float64" || type_name == "Double64") return value.kind == ValueKind::Float;
     if (type_name == "Bool") return value.kind == ValueKind::Boolean;
     if (type_name == "Char") return value.kind == ValueKind::Char;
     if (type_name == "String" || type_name == "String32" || type_name == "String64") return value.kind == ValueKind::String;
@@ -892,6 +923,17 @@ public:
                       << ": error: " << ast.error << '\n';
             return false;
         }
+        for (const auto& external : ast.program.externals) {
+            for (const auto& function : external.c_functions) {
+                CFunctionBinding binding;
+                binding.header = external.path;
+                binding.return_type = function.return_type;
+                for (const auto& parameter : function.parameters) {
+                    binding.parameter_types.push_back(parameter.type);
+                }
+                c_functions_[function.name] = std::move(binding);
+            }
+        }
         if (!parse_program()) return false;
         auto it = functions_.find("main");
         if (it == functions_.end()) {
@@ -1005,6 +1047,25 @@ private:
         }
         trim(path_str);
         if (path_str.empty()) return fail("empty path in #external");
+
+        // The AST pass in run() already collected the C prototypes.
+        // Consume the native declaration block without treating its header as a .monc file.
+        if (position_ < source_.size() && source_[position_] == '{') {
+            ++position_;
+            whitespace();
+            if (!word("playCodeC")) return fail("expected playCodeC block inside #external");
+            if (!expect('{')) return false;
+            int depth = 1;
+            while (position_ < source_.size() && depth > 0) {
+                if (source_[position_] == '{') ++depth;
+                else if (source_[position_] == '}') --depth;
+                ++position_;
+            }
+            if (depth != 0) return fail("unterminated playCodeC block");
+            if (!expect('}')) return false;
+            loaded_modules_.insert("@c:" + path_str);
+            return true;
+        }
 
         // "json" é um módulo nativo do interpretador, não um arquivo .monc.
         if (path_str == "json" || path_str == "json.monc") {
@@ -1203,6 +1264,130 @@ private:
         return args;
     }
 
+    std::optional<Value> call_c_function(const std::string& name, const std::vector<Value>& args) {
+        const auto found = c_functions_.find(name);
+        if (found == c_functions_.end()) return std::nullopt;
+        const auto& binding = found->second;
+
+        const bool is_math = binding.header == "math.h";
+        const bool is_stdlib = binding.header == "stdlib.h";
+        if (!is_math && !is_stdlib) {
+            fail("C header '" + binding.header + "' is not supported yet");
+            return std::nullopt;
+        }
+        if (binding.parameter_types.size() != args.size() || args.size() > 2) {
+            fail("C function '" + name + "' has an unsupported argument count (maximum: 2)");
+            return std::nullopt;
+        }
+
+        const bool float_signature = binding.return_type == "float" || binding.return_type == "double";
+        const bool int_signature = binding.return_type == "int";
+        if ((!float_signature && !int_signature) ||
+            (is_math && !float_signature) || (is_stdlib && !int_signature)) {
+            fail("C function '" + name + "' has an unsupported signature for header '" + binding.header + "'");
+            return std::nullopt;
+        }
+        for (const auto& type : binding.parameter_types) {
+            if (type != binding.return_type) {
+                fail("C function '" + name + "' currently requires parameters matching its return type");
+                return std::nullopt;
+            }
+        }
+
+        double float_values[2] = {0.0, 0.0};
+        int int_values[2] = {0, 0};
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            if (float_signature) {
+                if (args[i].kind == ValueKind::Float) float_values[i] = args[i].float_val;
+                else if (args[i].kind == ValueKind::Integer) float_values[i] = static_cast<double>(args[i].int_val);
+                else {
+                    fail("C function '" + name + "' expects numeric arguments");
+                    return std::nullopt;
+                }
+            } else {
+                if (args[i].kind != ValueKind::Integer ||
+                    args[i].int_val < std::numeric_limits<int>::min() ||
+                    args[i].int_val > std::numeric_limits<int>::max()) {
+                    fail("C function '" + name + "' expects Int32-compatible arguments");
+                    return std::nullopt;
+                }
+                int_values[i] = static_cast<int>(args[i].int_val);
+            }
+        }
+
+        double float_result = 0.0;
+        int int_result = 0;
+#ifdef _WIN32
+        HMODULE library = LoadLibraryA(is_math ? "ucrtbase.dll" : "ucrtbase.dll");
+        if (!library) library = LoadLibraryA("msvcrt.dll");
+        if (!library) {
+            fail("could not load the Windows C runtime for header '" + binding.header + "'");
+            return std::nullopt;
+        }
+        FARPROC symbol = GetProcAddress(library, name.c_str());
+        if (!symbol) {
+            FreeLibrary(library);
+            fail("C symbol '" + name + "' was not found in the Windows runtime");
+            return std::nullopt;
+        }
+        if (float_signature && binding.return_type == "double") {
+            if (args.size() == 1) { using Fn = double(__cdecl*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
+            else if (args.size() == 2) { using Fn = double(__cdecl*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
+            else { using Fn = double(__cdecl*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
+        } else if (float_signature) {
+            const float a = static_cast<float>(float_values[0]), b = static_cast<float>(float_values[1]);
+            float r = 0.0f;
+            if (args.size() == 1) { using Fn = float(__cdecl*)(float); r = reinterpret_cast<Fn>(symbol)(a); }
+            else if (args.size() == 2) { using Fn = float(__cdecl*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
+            else { using Fn = float(__cdecl*)(); r = reinterpret_cast<Fn>(symbol)(); }
+            float_result = r;
+        } else {
+            if (args.size() == 1) { using Fn = int(__cdecl*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
+            else if (args.size() == 2) { using Fn = int(__cdecl*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
+            else { using Fn = int(__cdecl*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
+        }
+        FreeLibrary(library);
+#else
+        void* library = nullptr;
+        if (is_math) {
+            library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
+            if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+        } else {
+            library = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
+            if (!library) library = dlopen("libc.so", RTLD_NOW | RTLD_LOCAL);
+        }
+        if (!library) {
+            fail("could not load native library for header '" + binding.header + "'");
+            return std::nullopt;
+        }
+        void* symbol = dlsym(library, name.c_str());
+        if (!symbol) {
+            dlclose(library);
+            fail("C symbol '" + name + "' was not found in the native library");
+            return std::nullopt;
+        }
+        if (float_signature && binding.return_type == "double") {
+            if (args.size() == 1) { using Fn = double(*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
+            else if (args.size() == 2) { using Fn = double(*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
+            else { using Fn = double(*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
+        } else if (float_signature) {
+            const float a = static_cast<float>(float_values[0]), b = static_cast<float>(float_values[1]);
+            float r = 0.0f;
+            if (args.size() == 1) { using Fn = float(*)(float); r = reinterpret_cast<Fn>(symbol)(a); }
+            else if (args.size() == 2) { using Fn = float(*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
+            else { using Fn = float(*)(); r = reinterpret_cast<Fn>(symbol)(); }
+            float_result = r;
+        } else {
+            if (args.size() == 1) { using Fn = int(*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
+            else if (args.size() == 2) { using Fn = int(*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
+            else { using Fn = int(*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
+        }
+        dlclose(library);
+#endif
+        if (int_signature) return Value::make_int(int_result, "Int32");
+        return Value::make_float(float_result, binding.return_type == "float" ? "Float32" : "Float64");
+    }
+
     std::optional<Value> call_function(const std::string& name, const std::vector<Value>& args) {
         auto it = functions_.find(name);
         if (it == functions_.end()) {
@@ -1218,6 +1403,7 @@ private:
 
         MiniInterpreter func_interp(def.body, path_);
         func_interp.functions_ = functions_;
+        func_interp.c_functions_ = c_functions_;
         func_interp.loaded_modules_ = loaded_modules_;
         func_interp.variables_ = variables_;
         func_interp.constants_ = constants_;
@@ -1541,6 +1727,113 @@ private:
         return integer_operand(text);
     }
 
+    std::optional<double> floating_operand(std::string text) {
+        trim(text);
+        if (text.empty()) return std::nullopt;
+        try {
+            std::size_t used = 0;
+            const double number = std::stod(text, &used);
+            if (used == text.size()) return number;
+        } catch (...) {}
+        if (moved_variables_.find(text) != moved_variables_.end()) return std::nullopt;
+        const auto found = variables_.find(text);
+        if (found != variables_.end()) {
+            if (found->second.kind == ValueKind::Float) return found->second.float_val;
+            if (found->second.kind == ValueKind::Integer) return static_cast<double>(found->second.int_val);
+            if (found->second.kind == ValueKind::Char) return static_cast<double>(found->second.char_val);
+        }
+        return std::nullopt;
+    }
+
+    bool is_float_expression(const std::string& text) const {
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (!std::isdigit(static_cast<unsigned char>(text[i]))) continue;
+            std::size_t j = i;
+            while (j < text.size() && std::isdigit(static_cast<unsigned char>(text[j]))) ++j;
+            if (j < text.size() && text[j] == '.' &&
+                j + 1 < text.size() && std::isdigit(static_cast<unsigned char>(text[j + 1]))) return true;
+            if (j < text.size() && (text[j] == 'e' || text[j] == 'E')) {
+                ++j;
+                if (j < text.size() && (text[j] == '+' || text[j] == '-')) ++j;
+                if (j < text.size() && std::isdigit(static_cast<unsigned char>(text[j]))) return true;
+            }
+            i = j ? j - 1 : i;
+        }
+        for (const auto& [name, value] : variables_) {
+            if (value.kind == ValueKind::Float && !name.empty() && text.find(name) != std::string::npos) return true;
+        }
+        return false;
+    }
+
+    std::optional<double> evaluate_float_expression(std::string text) {
+        trim(text);
+        if (text.empty()) return std::nullopt;
+
+        // Remove a pair of parentheses only when it encloses the whole expression.
+        if (text.front() == '(' && text.back() == ')') {
+            int depth = 0;
+            bool encloses_all = true;
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                if (text[i] == '(') ++depth;
+                else if (text[i] == ')') --depth;
+                if (depth == 0 && i + 1 < text.size()) { encloses_all = false; break; }
+            }
+            if (encloses_all) return evaluate_float_expression(text.substr(1, text.size() - 2));
+        }
+
+        auto find_operator = [&](const std::string& ops) -> std::size_t {
+            int paren_depth = 0;
+            int bracket_depth = 0;
+            bool in_double = false, in_single = false, escaped = false;
+            std::size_t candidate = std::string::npos;
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                const char c = text[i];
+                if (escaped) { escaped = false; continue; }
+                if (c == '\\') { escaped = true; continue; }
+                if (c == '"' && !in_single) { in_double = !in_double; continue; }
+                if (c == '\'' && !in_double) { in_single = !in_single; continue; }
+                if (in_double || in_single) continue;
+                if (c == '(') { ++paren_depth; continue; }
+                if (c == ')') { --paren_depth; continue; }
+                if (c == '[') { ++bracket_depth; continue; }
+                if (c == ']') { --bracket_depth; continue; }
+                if (paren_depth != 0 || bracket_depth != 0 || ops.find(c) == std::string::npos) continue;
+                if (i == 0) continue;
+                const char previous = text[i - 1];
+                if (previous == '+' || previous == '-' || previous == '*' || previous == '/' || previous == '%' ||
+                    previous == 'e' || previous == 'E') continue;
+                candidate = i;
+            }
+            return candidate;
+        };
+
+        std::size_t at = find_operator("+-");
+        if (at != std::string::npos) {
+            const auto left = evaluate_float_expression(text.substr(0, at));
+            const auto right = evaluate_float_expression(text.substr(at + 1));
+            if (!left || !right) return std::nullopt;
+            return text[at] == '+' ? *left + *right : *left - *right;
+        }
+
+        at = find_operator("*/%");
+        if (at != std::string::npos) {
+            const auto left = evaluate_float_expression(text.substr(0, at));
+            const auto right = evaluate_float_expression(text.substr(at + 1));
+            if (!left || !right) return std::nullopt;
+            if ((text[at] == '/' || text[at] == '%') && *right == 0.0) return std::nullopt;
+            if (text[at] == '*') return *left * *right;
+            if (text[at] == '/') return *left / *right;
+            return std::fmod(*left, *right);
+        }
+
+        if (text.front() == '+' || text.front() == '-') {
+            const auto value = evaluate_float_expression(text.substr(1));
+            if (!value) return std::nullopt;
+            return text.front() == '-' ? -*value : *value;
+        }
+        return floating_operand(text);
+    }
+
     std::optional<Value> evaluate_expression(std::string text) {
         trim(text);
         if (text.empty()) return std::nullopt;
@@ -1571,8 +1864,20 @@ private:
                 return Value::make_string(combined);
             }
             if (all_ok && !has_string_or_char && !part_values.empty()) {
+                const bool has_float = std::any_of(part_values.begin(), part_values.end(),
+                    [](const Value& value) { return value.kind == ValueKind::Float; });
+                if (has_float) {
+                    double sum = 0.0;
+                    for (const auto& pv : part_values) {
+                        if (pv.kind == ValueKind::Float) sum += pv.float_val;
+                        else if (pv.kind == ValueKind::Integer) sum += static_cast<double>(pv.int_val);
+                        else return std::nullopt;
+                    }
+                    return Value::make_float(sum);
+                }
                 long long sum = 0;
                 for (const auto& pv : part_values) {
+                    if (pv.kind != ValueKind::Integer) return std::nullopt;
                     const auto next = checked_add(sum, pv.int_val);
                     if (!next) return std::nullopt;
                     sum = *next;
@@ -1900,6 +2205,16 @@ private:
             }
         }
 
+        const auto c_open_pos = text.find('(');
+        if (c_open_pos != std::string::npos && text.back() == ')') {
+            std::string c_name = text.substr(0, c_open_pos);
+            trim(c_name);
+            if (c_functions_.find(c_name) != c_functions_.end()) {
+                const auto args = parse_argument_list(text.substr(c_open_pos + 1, text.size() - c_open_pos - 2));
+                return call_c_function(c_name, args);
+            }
+        }
+
         if (moved_variables_.find(text) != moved_variables_.end()) {
             fail("use of moved value '" + text + "'");
             return std::nullopt;
@@ -1908,6 +2223,11 @@ private:
         auto it = variables_.find(text);
         if (it != variables_.end()) {
             return it->second;
+        }
+
+        if (is_float_expression(text)) {
+            const auto float_val = evaluate_float_expression(text);
+            if (float_val) return Value::make_float(*float_val);
         }
 
         auto int_val = evaluate_integer_expression(text);
@@ -1981,6 +2301,16 @@ private:
                 return std::nullopt;
             }
 
+            if (left->kind == ValueKind::Float || right->kind == ValueKind::Float) {
+                const double left_value = left->kind == ValueKind::Float ? left->float_val : static_cast<double>(left->int_val);
+                const double right_value = right->kind == ValueKind::Float ? right->float_val : static_cast<double>(right->int_val);
+                if (std::string(op) == "==") return left_value == right_value;
+                if (std::string(op) == "!=") return left_value != right_value;
+                if (std::string(op) == "<=") return left_value <= right_value;
+                if (std::string(op) == ">=") return left_value >= right_value;
+                if (std::string(op) == "<") return left_value < right_value;
+                return left_value > right_value;
+            }
             const long long left_value = left->int_val;
             const long long right_value = right->int_val;
             if (std::string(op) == "==") return left_value == right_value;
@@ -2097,6 +2427,9 @@ private:
             if (!value_matches_type(*val, type_name)) return fail("value does not match declared type '" + type_name + "' for '" + name + "'");
             Value v = *val;
             v.type_name = type_name;
+            if (v.kind == ValueKind::Float && (type_name == "Float32" || type_name == "Double32")) {
+                v.float_val = static_cast<double>(static_cast<float>(v.float_val));
+            }
             if (v.kind == ValueKind::Array && type_name.rfind("Array<", 0) == 0 && type_name.back() == '>') {
                 v.array_element_type = type_name.substr(6, type_name.size() - 7);
             }
@@ -2150,6 +2483,10 @@ private:
             if (!value_matches_type(*val, it->second.type_name)) return fail("value does not match declared type '" + it->second.type_name + "' for '" + name + "'");
             Value v = *val;
             v.type_name = it->second.type_name;
+            if (v.kind == ValueKind::Float &&
+                (v.type_name == "Float32" || v.type_name == "Double32")) {
+                v.float_val = static_cast<double>(static_cast<float>(v.float_val));
+            }
             if (v.kind == ValueKind::Array) v.array_element_type = it->second.array_element_type;
             it->second = std::move(v);
         }
@@ -2187,6 +2524,7 @@ private:
 
             MiniInterpreter iteration(body, path_);
             iteration.functions_ = functions_;
+            iteration.c_functions_ = c_functions_;
             iteration.loaded_modules_ = loaded_modules_;
             iteration.variables_ = variables_;
             if (!iteration.parse_block(true, false)) return false;
@@ -2240,6 +2578,7 @@ private:
         for (long long value = *initial; value < *limit; value += *increment) {
             MiniInterpreter iteration(body, path_);
             iteration.functions_ = functions_;
+            iteration.c_functions_ = c_functions_;
             iteration.loaded_modules_ = loaded_modules_;
             iteration.variables_ = variables_;
             iteration.variables_[name] = Value::make_int(value);
@@ -2538,6 +2877,7 @@ private:
     std::unordered_set<std::string> moved_variables_;
     std::unordered_set<std::string> constants_;
     std::unordered_map<std::string, FunctionDef> functions_;
+    std::unordered_map<std::string, CFunctionBinding> c_functions_;
     std::unordered_set<std::string> loaded_modules_;
     std::vector<std::string> messages_;
     Value return_value_;

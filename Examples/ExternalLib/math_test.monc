@@ -1,0 +1,34 @@
+#external "math.h"{
+    playCodeC {
+        double sqrt(double value);
+        double pow(double base, double exponent);
+        double sin(double value);
+        double cos(double value);
+        double tan(double value);
+        double acos(double value);
+        double log(double value);
+        double exp(double value);
+        double hypot(double x, double y);
+    }
+}
+
+fn main[] -> Int32 {
+    let result: Double32 = sqrt(8.0);
+    print[result];
+    let result: Double32 = pow(2.0, 3.0);
+    print[result];
+    let result: Double32 = sin(3.14);
+    print[result];
+    let result: Double32 = cos(3.14);
+    print[result];
+    let result: Double32 = tan(3.14);
+    print[result];
+    let result: Double32 = acos(-1.0);
+    print[result];
+    let result: Double32 = log(2.718);
+    print[result];
+    let result: Double32 = exp(1.0);
+    print[result];
+    let result: Double32 = hypot(3.0, 4.0);
+    print[result];
+}

@@ -1,0 +1,16 @@
+fn main[] -> Int32 {
+    let a: Float32 = 1.5;
+    let b: Float64 = 2.25;
+    let sum: Double32 = a + b;
+    let scaled: Float64 = sum * 2.0;
+    let exp: Double64 = 1e2 / 4.0;
+
+    print["sum=" + sum];
+    print["scaled=" + scaled];
+    print["exp=" + exp];
+
+    if (exp == 25.0) {
+        print["float-ok"];
+    }
+    return 0;
+}

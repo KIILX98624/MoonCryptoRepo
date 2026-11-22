@@ -23,6 +23,7 @@ endif()
 if(WIN32)
     target_link_libraries(monc PRIVATE bcrypt)
 else()
+    target_link_libraries(monc PRIVATE ${CMAKE_DL_LIBS})
     find_package(OpenSSL QUIET COMPONENTS Crypto)
     if(OpenSSL_FOUND)
         target_compile_definitions(monc PRIVATE MOONCRYPTO_USE_OPENSSL=1)
@@ -31,3 +32,19 @@ else()
         message(WARNING "OpenSSL não encontrado: crypto.sha256 ficará indisponível neste alvo")
     endif()
 endif()
+
+enable_testing()
+add_test(
+    NAME float_runtime
+    COMMAND ${CMAKE_COMMAND}
+        -DMONC=$<TARGET_FILE:monc>
+        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Test/fixtures/float.monc
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Test/check_float.cmake
+)
+add_test(
+    NAME c_interop_math
+    COMMAND ${CMAKE_COMMAND}
+        -DMONC=$<TARGET_FILE:monc>
+        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Test/fixtures/c_interop.monc
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Test/check_c_interop.cmake
+)
