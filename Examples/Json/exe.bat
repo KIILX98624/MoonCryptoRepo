@@ -17,7 +17,7 @@ python "1ainput.py"
 
 echo.
 echo [2/3] Executando MoonCrypto...
-mooncyt "3main.mncyt"
+monc run "3main.monc"
 
 pause
 
