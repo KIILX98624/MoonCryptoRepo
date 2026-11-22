@@ -1,25 +1,23 @@
 # MoonCrypto Language Support for VS Code
 
-Language support for MoonCrypto source files (`.monc`): syntax highlighting for control flow including `if`, `else`, `while` and `for`, declarations such as `const`, `struct` and `class`, `//` and `/* */` comments, bracket matching, automatic indentation, snippets for `main[]`, functions, `const`, `struct`, `class`, `Bool`, `Bytes`, `ifelse`, `while`, `for`, and `print`, plus the MoonCrypto logo in the extension details.
+Language support for MoonCrypto source files (`.monc`): syntax highlighting, comments, bracket matching, automatic indentation and snippets.
 
-## Install with the packaged extension (recommended)
+> The current source extension is `.monc`. The old `.mncyt` extension is no longer used.
 
-From the project root, run:
+## Build and install the latest extension
+
+Open a terminal in the repository root and run:
 
 ```powershell
-  code --install-extension .\editors\vscode\mooncrypto-language-0.1.2.vsix --force
+cd .\editors\vscode
+npx --yes @vscode/vsce package
+code --install-extension .\mooncrypto-language-1.5.5.vsix --force
 ```
 
-Then run `Developer: Reload Window` from the VS Code command palette (`Ctrl+Shift+P`).
+After installation, run **Developer: Reload Window** from the VS Code command palette (`Ctrl+Shift+P`).
 
 ## Install from this folder
 
-Copy this `vscode` folder to your VS Code extensions directory and rename it to `mooncrypto-language-0.1.2`, then reload VS Code. On Windows, the extensions directory is `%USERPROFILE%\.vscode\extensions`.
-
-Alternatively, once packaged as a VSIX, install it with:
-
-```powershell
-code --install-extension .\mooncrypto-language-0.1.0.vsix
-```
+You can also copy this `vscode` folder to your VS Code extensions directory (`%USERPROFILE%\.vscode\extensions`) and reload VS Code. For normal distribution, packaging as a VSIX is recommended.
 
 This extension provides editor support only. It does not include the MoonCrypto compiler or language diagnostics.
