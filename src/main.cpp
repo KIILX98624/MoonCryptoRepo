@@ -1282,33 +1282,50 @@ private:
 
         const bool float_signature = binding.return_type == "float" || binding.return_type == "double";
         const bool int_signature = binding.return_type == "int";
+        const bool void_signature = binding.return_type == "void";
+        const bool srand_signature =
+            is_stdlib && void_signature && args.size() == 1 &&
+            binding.parameter_types.size() == 1 &&
+            binding.parameter_types[0] == "unsigned int";
         const bool string_pointer_signature =
             is_stdlib && int_signature && args.size() == 1 &&
             binding.parameter_types.size() == 1 &&
             (binding.parameter_types[0] == "char*" || binding.parameter_types[0] == "const char*");
-        if ((!float_signature && !int_signature) ||
-            (is_math && !float_signature) || (is_stdlib && !int_signature)) {
+        if ((!float_signature && !int_signature && !srand_signature) ||
+            (is_math && !float_signature) ||
+            (is_stdlib && !int_signature && !srand_signature)) {
             fail("C function '" + name + "' has an unsupported signature for header '" + binding.header + "'");
             return std::nullopt;
         }
-        if (!string_pointer_signature) {
+        if (!string_pointer_signature && !srand_signature) {
             for (const auto& type : binding.parameter_types) {
                 if (type != binding.return_type) {
                     fail("C function '" + name + "' currently requires parameters matching its return type");
                     return std::nullopt;
                 }
             }
-        } else if (args[0].kind != ValueKind::String) {
+        } else if (string_pointer_signature && args[0].kind != ValueKind::String) {
             fail("C function '" + name + "' expects a MonC String for its char* parameter");
             return std::nullopt;
         }
 
         double float_values[2] = {0.0, 0.0};
         int int_values[2] = {0, 0};
+        unsigned int unsigned_int_value = 0;
         for (std::size_t i = 0; i < args.size(); ++i) {
             if (string_pointer_signature) {
                 // The std::string storage remains alive for the duration of the C call;
                 // c_str() supplies the null-terminated buffer expected by C.
+                continue;
+            }
+            if (srand_signature) {
+                if (args[i].kind != ValueKind::Integer || args[i].int_val < 0 ||
+                    static_cast<unsigned long long>(args[i].int_val) >
+                        static_cast<unsigned long long>(std::numeric_limits<unsigned int>::max())) {
+                    fail("C function 'srand' expects an integer in the unsigned int range");
+                    return std::nullopt;
+                }
+                unsigned_int_value = static_cast<unsigned int>(args[i].int_val);
                 continue;
             }
             if (float_signature) {
@@ -1355,6 +1372,9 @@ private:
             else if (args.size() == 2) { using Fn = float(__cdecl*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
             else { using Fn = float(__cdecl*)(); r = reinterpret_cast<Fn>(symbol)(); }
             float_result = r;
+        } else if (srand_signature) {
+            using Fn = void(__cdecl*)(unsigned int);
+            reinterpret_cast<Fn>(symbol)(unsigned_int_value);
         } else if (string_pointer_signature) {
             using Fn = int(__cdecl*)(const char*);
             int_result = reinterpret_cast<Fn>(symbol)(args[0].str_val.c_str());
@@ -1394,6 +1414,9 @@ private:
             else if (args.size() == 2) { using Fn = float(*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
             else { using Fn = float(*)(); r = reinterpret_cast<Fn>(symbol)(); }
             float_result = r;
+        } else if (srand_signature) {
+            using Fn = void(*)(unsigned int);
+            reinterpret_cast<Fn>(symbol)(unsigned_int_value);
         } else if (string_pointer_signature) {
             using Fn = int(*)(const char*);
             int_result = reinterpret_cast<Fn>(symbol)(args[0].str_val.c_str());
@@ -1404,6 +1427,7 @@ private:
         }
         dlclose(library);
 #endif
+        if (srand_signature) return Value::make_int(0, "Void");
         if (int_signature) return Value::make_int(int_result, "Int32");
         return Value::make_float(float_result, binding.return_type == "float" ? "Float32" : "Float64");
     }
@@ -1470,17 +1494,19 @@ private:
         }
         const std::string name = source_.substr(start, position_ - start);
         const bool native_json_call = name.rfind("json.", 0) == 0;
-        if (functions_.find(name) == functions_.end() && !native_json_call) {
+        const bool c_external_call = c_functions_.find(name) != c_functions_.end();
+        if (functions_.find(name) == functions_.end() && !native_json_call && !c_external_call) {
             position_ = saved_pos;
             return false;
         }
         whitespace();
-        if (position_ >= source_.size() || source_[position_] != '[') {
+        const char expected_open = c_external_call ? '(' : '[';
+        if (position_ >= source_.size() || source_[position_] != expected_open) {
             position_ = saved_pos;
             return false;
         }
         char open_c = source_[position_++];
-        char close_c = ']';
+        char close_c = c_external_call ? ')' : ']';
 
         std::size_t arg_start = position_;
         int depth = 1;
@@ -1503,7 +1529,11 @@ private:
         if (!expect(';')) return fail("expected ';' after function call to '" + name + "'");
 
         if (active) {
-            if (native_json_call) {
+            if (c_external_call) {
+                auto args = parse_argument_list(arg_content);
+                auto result = call_c_function(name, args);
+                if (!result) return false;
+            } else if (native_json_call) {
                 auto result = evaluate_expression(name + "[" + arg_content + "]");
                 if (!result) return fail("invalid call to JSON module function '" + name + "'");
             } else {
