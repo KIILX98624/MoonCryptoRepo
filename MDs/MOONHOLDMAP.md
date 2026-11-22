@@ -1,6 +1,6 @@
 # MoonCrypto — Holdmap da linguagem
 
-Este documento resume os recursos disponíveis no protótipo atual do MoonCrypto (`.mncyt`). O projeto usa um interpretador experimental em C++20, com lexer e validação AST integrados; a geração de código nativo completo e o ownership checker ainda estão em evolução.
+Este documento resume os recursos disponíveis no protótipo atual do MoonCrypto (`.monc`). O projeto usa um interpretador experimental em C++20, com lexer e validação AST integrados; a geração de código nativo completo e o ownership checker ainda estão em evolução.
 
 As decisões formais da linguagem estão em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
@@ -22,7 +22,7 @@ As decisões formais da linguagem estão em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 | Interrupção de laço | `break;` e `continue;` | Implementado |
 | Retorno | `return expressão;` | Implementado |
 | Módulo externo | `#external "nome"` | Implementado |
-| Lexer | `mooncyt lex arquivo.mncyt` | Implementado inicialmente |
+| Lexer | `monc lex arquivo.monc` | Implementado inicialmente |
 | Comentário de linha | `// comentário` | Editor / interpretador |
 | Comentário de bloco | `/* comentário */` | Editor / interpretador |
 | Constantes | `const nome: Tipo = valor;` | Implementado |
@@ -35,7 +35,7 @@ As decisões formais da linguagem estão em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
 Funções usam colchetes para a lista de parâmetros. A função `main` não possui parâmetros e é escrita como `main[]`.
 
-```mncyt
+```monc
 fn somar[a: Int32, b: Int32] -> Int32 {
     return a + b;
 }
@@ -51,7 +51,7 @@ Chamadas de função também usam colchetes: `somar[10, 20]`.
 
 ## Variáveis e tipos
 
-```mncyt
+```monc
 let idade: Int32 = 18;
 let nome: String32 = "MoonCrypto";
 let inicial: Char = 'M';
@@ -61,13 +61,13 @@ idade = idade + 1;
 
 Constantes não podem ser reatribuídas:
 
-```mncyt
+```monc
 const LIMITE: Int32 = 100;
 ```
 
 Estruturas e classes já são palavras reservadas e suas declarações são reconhecidas como base de sintaxe:
 
-```mncyt
+```monc
 struct Usuario {
     nome: String32;
 }
@@ -91,7 +91,7 @@ Tipos atualmente usados pelo interpretador:
 
 ## Saída com `print`
 
-```mncyt
+```monc
 print["Olá, MoonCrypto!"];
 print[nome];
 print["Idade: " + idade];
@@ -101,7 +101,7 @@ O `print` aceita literais, variáveis e concatenação de texto, números e cara
 
 ## Condicionais
 
-```mncyt
+```monc
 if (idade >= 18) {
         print["maior de idade"];
 } else {
@@ -113,7 +113,7 @@ Comparadores disponíveis incluem `==`, `!=`, `<`, `>`, `<=` e `>=`.
 
 Também é possível encadear condições:
 
-```mncyt
+```monc
 if (valor == 1) {
     print["um"];
 } else if (valor == 2) {
@@ -127,7 +127,7 @@ if (valor == 1) {
 
 Os laços usam colchetes para destacar a cláusula de controle.
 
-```mncyt
+```monc
 while [idade < 21] {
     idade = idade + 1;
 }
@@ -139,7 +139,7 @@ for [let i: Int32 = 0; i < 5; i = i + 1] {
 
 Dentro dos laços:
 
-```mncyt
+```monc
 if (i == 2) {
     continue;
 }
@@ -151,7 +151,7 @@ if (i == 4) {
 
 ## `switch`, `case` e `default`
 
-```mncyt
+```monc
 switch [dia] {
     case 1 {
         print["segunda-feira"];
@@ -167,7 +167,7 @@ switch [dia] {
 
 ## Módulos externos
 
-```mncyt
+```monc
 #external "matematica"
 
 fn main[] -> Int32 {
@@ -185,7 +185,7 @@ A API de criptografia será disponibilizada pelo módulo explícito `crypto`. El
 
 ### Hash SHA-256
 
-```mncyt
+```monc
 use crypto
 
 fn main[] -> Int32 {
@@ -198,13 +198,13 @@ fn main[] -> Int32 {
 
 Também será permitido o uso direto em uma expressão:
 
-```mncyt
+```monc
 print[crypto.sha256[nome].hex[]];
 ```
 
 ### Criptografia autenticada
 
-```mncyt
+```monc
 use crypto
 
 fn main[] -> Int32 {
@@ -232,7 +232,7 @@ fn main[] -> Int32 {
 
 ## Comentários
 
-```mncyt
+```monc
 // comentário de uma linha
 
 /* comentário
@@ -242,7 +242,7 @@ fn main[] -> Int32 {
 ## Execução atual
 
 ```powershell
-mooncyt caminho\para\main.mncyt
+monc caminho\para\main.monc
 ```
 
 Ou, a partir do projeto:
@@ -264,7 +264,7 @@ moon run examples\while
 
 O protótipo já cria e indexa sequências de bytes:
 
-```mncyt
+```monc
 let dados = Bytes[1, 2, 255];
 print["primeiro=" + dados[0]];
 ```
@@ -273,7 +273,7 @@ print["primeiro=" + dados[0]];
 
 O valor inteiro retornado por `main[]` vira o código de saída do processo:
 
-```mncyt
+```monc
 fn main[] -> Int32 {
     return 7;
 }
@@ -281,11 +281,11 @@ fn main[] -> Int32 {
 
 ## Lexer
 
-O comando `mooncyt lex` lista tokens com linha e coluna. Essa camada já existe, mas o interpretador principal ainda está em migração gradual para consumir uma AST baseada nela.
+O comando `monc lex` lista tokens com linha e coluna. Essa camada já existe, mas o interpretador principal ainda está em migração gradual para consumir uma AST baseada nela.
 
 ## AST inicial
 
-`mooncyt ast arquivo.mncyt` usa o lexer para reconhecer funções, parâmetros e tipos de retorno. A AST ainda não representa todas as expressões e instruções.
+`monc ast arquivo.monc` usa o lexer para reconhecer funções, parâmetros e tipos de retorno. A AST ainda não representa todas as expressões e instruções.
 
 ## Verificação de tipos
 
