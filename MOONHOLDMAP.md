@@ -242,13 +242,13 @@ fn main[] -> Int32 {
 ## Execução atual
 
 ```powershell
-monc caminho\para\main.monc
+monc run caminho\para\main.monc
 ```
 
 Ou, a partir do projeto:
 
 ```powershell
-moon run examples\while
+monc run Examples\Others\while.monc
 ```
 
 ## Próximos recursos
