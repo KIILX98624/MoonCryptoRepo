@@ -69,6 +69,27 @@ bytes          = "Bytes" "[" [ integer { "," integer } ] "]" ;
 ```
 
 
+## Arrays nativos (`Array<T>`)
+
+
+> **Nota de modificação (2026-11-21):** foi adicionada a primeira implementação de arrays nativos ao interpretador. Arrays armazenam valores em sequência, compartilham o armazenamento interno entre cópias de `Value` no interpretador e oferecem criação, indexação e operações básicas. A verificação de `Array<T>` valida os elementos na declaração e nas operações de mutação; não representa ainda generics completos nem ownership verificado pelo compilador.
+
+```mncyt
+fn main[] -> Int32 {
+    let numeros: Array<Int32> = Array[10, 20, 30];
+    array.push[numeros, 40];
+    print[numeros[0]];
+    print[array.length[numeros]];
+    array.set[numeros, 0, 100];
+    array.remove[numeros, 1];
+    let ultimo: Int32 = array.pop[numeros];
+    array.clear[numeros];
+    return 0;
+}
+```
+
+API: `Array[...]`, `array.length[array]`, `array.push[array, valor]`, `array.pop[array]`, `array.get[array, indice]`, `array.set[array, indice, valor]`, `array.remove[array, indice]` e `array.clear[array]`. Índices começam em zero. Índices inválidos, remoção de array vazio e tipos incompatíveis fazem a operação falhar no interpretador.
+
 ## Módulo JSON nativo
 
 O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.mncyt` separado nem dependência externa.
