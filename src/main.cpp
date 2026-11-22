@@ -334,7 +334,8 @@ struct Value {
     char char_val = '\0';
     bool bool_val = false;
     std::vector<unsigned char> bytes_val;
-    std::vector<Value> array_val;
+    std::shared_ptr<std::vector<Value>> array_val = std::make_shared<std::vector<Value>>();
+    std::string array_element_type = "Inferred";
     std::shared_ptr<JsonNode> json_val;
     bool result_ok = false;
     std::shared_ptr<Value> result_value;
@@ -383,7 +384,8 @@ struct Value {
         Value val;
         val.kind = ValueKind::Array;
         val.type_name = std::move(type);
-        val.array_val = std::move(v);
+        val.array_val = std::make_shared<std::vector<Value>>(std::move(v));
+        if (val.array_val && !val.array_val->empty()) val.array_element_type = val.array_val->front().type_name;
         return val;
     }
 
@@ -426,9 +428,11 @@ struct Value {
             }
             case ValueKind::Array: {
                 std::string out = "[";
-                for (std::size_t i = 0; i < array_val.size(); ++i) {
-                    if (i) out += ", ";
-                    out += array_val[i].to_string();
+                if (array_val) {
+                    for (std::size_t i = 0; i < array_val->size(); ++i) {
+                        if (i) out += ", ";
+                        out += (*array_val)[i].to_string();
+                    }
                 }
                 return out + "]";
             }
@@ -501,7 +505,14 @@ bool value_matches_type(const Value& value, const std::string& type_name) {
     if (type_name == "Char") return value.kind == ValueKind::Char;
     if (type_name == "String" || type_name == "String32" || type_name == "String64") return value.kind == ValueKind::String;
     if (type_name == "Bytes") return value.kind == ValueKind::Bytes;
-    if (type_name == "Array" || type_name.rfind("Array<", 0) == 0) return value.kind == ValueKind::Array;
+    if (type_name == "Array" || type_name.rfind("Array<", 0) == 0) {
+        if (value.kind != ValueKind::Array || !value.array_val) return false;
+        if (type_name.rfind("Array<", 0) == 0 && type_name.back() == '>') {
+            const std::string element_type = type_name.substr(6, type_name.size() - 7);
+            for (const auto& item : *value.array_val) if (!value_matches_type(item, element_type)) return false;
+        }
+        return true;
+    }
     if (type_name == "Json" || type_name == "JsonValue") return value.kind == ValueKind::Json;
     if (type_name == "Result" || type_name.rfind("Result<", 0) == 0) return value.kind == ValueKind::Result;
     if (type_name.rfind("Int", 0) == 0 || type_name.rfind("UInt", 0) == 0) {
@@ -1655,6 +1666,55 @@ private:
             std::string fn_name = text.substr(0, open_pos);
             trim(fn_name);
 
+            if (fn_name == "Array") {
+                auto values = parse_argument_list(arg_content);
+                if (values.empty() && !arg_content.empty()) return std::nullopt;
+                auto array = Value::make_array(std::move(values));
+                if (array.array_val && !array.array_val->empty()) array.array_element_type = array.array_val->front().type_name;
+                return array;
+            }
+            if (fn_name == "array.length" || fn_name == "array.push" || fn_name == "array.pop" ||
+                fn_name == "array.set" || fn_name == "array.get" || fn_name == "array.remove" ||
+                fn_name == "array.clear") {
+                auto args = parse_argument_list(arg_content);
+                if (args.empty() || args[0].kind != ValueKind::Array || !args[0].array_val) return std::nullopt;
+                auto& items = *args[0].array_val;
+                if (fn_name == "array.length") {
+                    if (args.size() != 1) return std::nullopt;
+                    return Value::make_int(static_cast<long long>(items.size()), "Int32");
+                }
+                if (fn_name == "array.push") {
+                    if (args.size() != 2 || (!args[0].array_element_type.empty() && args[0].array_element_type != "Inferred" && !value_matches_type(args[1], args[0].array_element_type))) return std::nullopt;
+                    items.push_back(args[1]);
+                    return Value::make_bool(true);
+                }
+                if (fn_name == "array.pop") {
+                    if (args.size() != 1 || items.empty()) return std::nullopt;
+                    Value removed = std::move(items.back());
+                    items.pop_back();
+                    return removed;
+                }
+                if (fn_name == "array.get") {
+                    if (args.size() != 2 || args[1].kind != ValueKind::Integer || args[1].int_val < 0 || static_cast<std::size_t>(args[1].int_val) >= items.size()) return std::nullopt;
+                    return items[static_cast<std::size_t>(args[1].int_val)];
+                }
+                if (fn_name == "array.set") {
+                    if (args.size() != 3 || args[1].kind != ValueKind::Integer || args[1].int_val < 0 || static_cast<std::size_t>(args[1].int_val) >= items.size()) return std::nullopt;
+                    if (!args[0].array_element_type.empty() && args[0].array_element_type != "Inferred" && !value_matches_type(args[2], args[0].array_element_type)) return std::nullopt;
+                    items[static_cast<std::size_t>(args[1].int_val)] = args[2];
+                    return Value::make_bool(true);
+                }
+                if (fn_name == "array.remove") {
+                    if (args.size() != 2 || args[1].kind != ValueKind::Integer || args[1].int_val < 0 || static_cast<std::size_t>(args[1].int_val) >= items.size()) return std::nullopt;
+                    items.erase(items.begin() + args[1].int_val);
+                    return Value::make_bool(true);
+                }
+                if (fn_name == "array.clear") {
+                    if (args.size() != 1) return std::nullopt;
+                    items.clear();
+                    return Value::make_bool(true);
+                }
+            }
             if (fn_name == "json.parse") {
                 auto args = parse_argument_list(arg_content);
                 if (args.size() != 1 || args[0].kind != ValueKind::String || args[0].str_val.size() > 8 * 1024 * 1024) return std::nullopt;
@@ -1820,8 +1880,8 @@ private:
                 }
                 if (variable->second.kind == ValueKind::Array) {
                     auto index = evaluate_integer_expression(text.substr(open_pos + 1, text.size() - open_pos - 2));
-                    if (!index || *index < 0 || static_cast<std::size_t>(*index) >= variable->second.array_val.size()) return std::nullopt;
-                    return variable->second.array_val[static_cast<std::size_t>(*index)];
+                    if (!variable->second.array_val || !index || *index < 0 || static_cast<std::size_t>(*index) >= variable->second.array_val->size()) return std::nullopt;
+                    return (*variable->second.array_val)[static_cast<std::size_t>(*index)];
                 }
             }
             if (functions_.find(fn_name) != functions_.end()) {
@@ -2027,6 +2087,9 @@ private:
             if (!value_matches_type(*val, type_name)) return fail("value does not match declared type '" + type_name + "' for '" + name + "'");
             Value v = *val;
             v.type_name = type_name;
+            if (v.kind == ValueKind::Array && type_name.rfind("Array<", 0) == 0 && type_name.back() == '>') {
+                v.array_element_type = type_name.substr(6, type_name.size() - 7);
+            }
             variables_[name] = std::move(v);
             if (is_const) constants_.insert(name);
         }
@@ -2077,6 +2140,7 @@ private:
             if (!value_matches_type(*val, it->second.type_name)) return fail("value does not match declared type '" + it->second.type_name + "' for '" + name + "'");
             Value v = *val;
             v.type_name = it->second.type_name;
+            if (v.kind == ValueKind::Array) v.array_element_type = it->second.array_element_type;
             it->second = std::move(v);
         }
         return true;
