@@ -1349,15 +1349,22 @@ private:
         double float_result = 0.0;
         int int_result = 0;
 #ifdef _WIN32
-        HMODULE library = LoadLibraryA(is_math ? "ucrtbase.dll" : "ucrtbase.dll");
-        if (!library) library = LoadLibraryA("msvcrt.dll");
+        // Keep the CRT modules loaded for the interpreter lifetime. Unloading
+        // a dynamically loaded CRT after each call can reset its internal state,
+        // making srand() appear ineffective when rand() is called later.
+        static HMODULE math_library = nullptr;
+        static HMODULE stdlib_library = nullptr;
+        HMODULE& library = is_math ? math_library : stdlib_library;
+        if (!library) {
+            library = LoadLibraryA("ucrtbase.dll");
+            if (!library) library = LoadLibraryA("msvcrt.dll");
+        }
         if (!library) {
             fail("could not load the Windows C runtime for header '" + binding.header + "'");
             return std::nullopt;
         }
         FARPROC symbol = GetProcAddress(library, name.c_str());
         if (!symbol) {
-            FreeLibrary(library);
             fail("C symbol '" + name + "' was not found in the Windows runtime");
             return std::nullopt;
         }
@@ -1383,15 +1390,20 @@ private:
             else if (args.size() == 2) { using Fn = int(__cdecl*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
             else { using Fn = int(__cdecl*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
-        FreeLibrary(library);
 #else
-        void* library = nullptr;
-        if (is_math) {
-            library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
-            if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
-        } else {
-            library = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
-            if (!library) library = dlopen("libc.so", RTLD_NOW | RTLD_LOCAL);
+        // Cache handles instead of closing after every call so stateful C
+        // library functions keep their state across MonC calls.
+        static void* math_library = nullptr;
+        static void* stdlib_library = nullptr;
+        void*& library = is_math ? math_library : stdlib_library;
+        if (!library) {
+            if (is_math) {
+                library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
+                if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+            } else {
+                library = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
+                if (!library) library = dlopen("libc.so", RTLD_NOW | RTLD_LOCAL);
+            }
         }
         if (!library) {
             fail("could not load native library for header '" + binding.header + "'");
@@ -1425,7 +1437,6 @@ private:
             else if (args.size() == 2) { using Fn = int(*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
             else { using Fn = int(*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
-        dlclose(library);
 #endif
         if (srand_signature) return Value::make_int(0, "Void");
         if (int_signature) return Value::make_int(int_result, "Int32");
