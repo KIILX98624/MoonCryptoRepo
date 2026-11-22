@@ -66,60 +66,106 @@ struct Parser {
         result.program.functions.push_back(std::move(function));
         return true;
     }
-    AstResult run() {
-        while (!is(TokenKind::EndOfFile)) {
-            if (is(TokenKind::Identifier, "fn")) {
-                if (!parse_function()) return result;
-            } else if (is(TokenKind::Identifier, "const")) {
-                ++index;
-                if (!is(TokenKind::Identifier)) return fail("expected constant identifier");
-                std::string cname = current().text;
-                ++index;
-                std::string ctype = "Inferred";
-                if (take(TokenKind::Symbol, ":")) {
-                    if (!is(TokenKind::Identifier)) return fail("expected constant type");
-                    ctype = current().text;
-                    ++index;
+    
+AstResult run() {
+    while (!is(TokenKind::EndOfFile)) {
+        if (is(TokenKind::Identifier, "fn")) {
+            if (!parse_function()) return result;
+
+        } else if (is(TokenKind::Identifier, "const")) {
+            ++index;
+
+            if (!is(TokenKind::Identifier)) {
+                fail("expected constant identifier");
+                return result;
+            }
+
+            std::string cname = current().text;
+            ++index;
+
+            std::string ctype = "Inferred";
+
+            if (take(TokenKind::Symbol, ":")) {
+                if (!is(TokenKind::Identifier)) {
+                    fail("expected constant type");
+                    return result;
                 }
-                result.program.constants.push_back({std::move(cname), std::move(ctype)});
-                while (!is(TokenKind::EndOfFile) && !take(TokenKind::Symbol, ";")) {
-                    ++index;
-                }
-            } else if (is(TokenKind::Identifier, "struct") || is(TokenKind::Identifier, "class")) {
-                bool is_cls = current().text == "class";
-                ++index;
-                if (!is(TokenKind::Identifier)) return fail("expected type identifier");
-                std::string sname = current().text;
-                ++index;
-                result.program.types.push_back({std::move(sname), is_cls});
-                if (take(TokenKind::Symbol, "{")) {
-                    int depth = 1;
-                    while (depth > 0 && !is(TokenKind::EndOfFile)) {
-                        if (take(TokenKind::Symbol, "{")) ++depth;
-                        else if (take(TokenKind::Symbol, "}")) --depth;
-                        else ++index;
-                    }
-                }
-            } else if (is(TokenKind::Symbol, "#")) {
-                ++index;
-                if (is(TokenKind::Identifier, "external")) {
-                    ++index;
-                    if (is(TokenKind::String)) {
-                        std::string path = current().text;
-                        if (path.size() >= 2 && path.front() == '"' && path.back() == '"') {
-                            path = path.substr(1, path.size() - 2);
-                        }
-                        result.program.externals.push_back({std::move(path)});
-                        ++index;
-                    }
-                    take(TokenKind::Symbol, ";");
-                }
-            } else {
+
+                ctype = current().text;
                 ++index;
             }
+
+            result.program.constants.push_back({
+                std::move(cname),
+                std::move(ctype)
+            });
+
+            while (!is(TokenKind::EndOfFile) &&
+                   !take(TokenKind::Symbol, ";")) {
+                ++index;
+            }
+
+        } else if (is(TokenKind::Identifier, "struct") ||
+                   is(TokenKind::Identifier, "class")) {
+
+            bool is_cls = current().text == "class";
+            ++index;
+
+            if (!is(TokenKind::Identifier)) {
+                fail("expected type identifier");
+                return result;
+            }
+
+            std::string sname = current().text;
+            ++index;
+
+            result.program.types.push_back({
+                std::move(sname), is_cls
+            });
+
+            if (take(TokenKind::Symbol, "{")) {
+                int depth = 1;
+
+                while (depth > 0 && !is(TokenKind::EndOfFile)) {
+                    if (take(TokenKind::Symbol, "{")) ++depth;
+                    else if (take(TokenKind::Symbol, "}")) --depth;
+                    else ++index;
+                }
+            }
+
+        } else if (is(TokenKind::Symbol, "#")) {
+            ++index;
+
+            if (is(TokenKind::Identifier, "external")) {
+                ++index;
+
+                if (is(TokenKind::String)) {
+                    std::string path = current().text;
+
+                    if (path.size() >= 2 &&
+                        path.front() == '"' &&
+                        path.back() == '"') {
+                        path = path.substr(1, path.size() - 2);
+                    }
+
+                    result.program.externals.push_back({
+                        std::move(path)
+                    });
+
+                    ++index;
+                }
+
+                take(TokenKind::Symbol, ";");
+            }
+
+        } else {
+            ++index;
         }
-        return result;
     }
+
+    return result;
+}
+
 };
 
 } // namespace
