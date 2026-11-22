@@ -259,9 +259,9 @@ O artefato será um executável nativo do sistema de destino. O compilador deve 
 Exemplo de comandos planejados:
 
 ```text
-moon build
+monc build
 monc run
-moon test
+monc test
 ```
 
 **Vantagens:** desempenho nativo, possibilidade de compilação cruzada e acesso ao ecossistema de bibliotecas existente.
@@ -378,12 +378,12 @@ A biblioteca escolhida, os algoritmos oferecidos e as garantias de limpeza de me
 
 O ecossistema poderá incluir:
 
-- `moon`: compilador e interface de linha de comando.
-- `moon pkg`: obtenção e fixação de dependências.
-- `moon fmt`: formatador.
-- `moon lint`: avisos sobre código inseguro, conversões e APIs criptográficas de baixo nível.
-- `moon doc`: geração de documentação.
-- `moon test`: execução de testes.
+- `monc`: compilador e interface de linha de comando.
+- `monc pkg`: obtenção e fixação de dependências.
+- `monc fmt`: formatador.
+- `monc lint`: avisos sobre código inseguro, conversões e APIs criptográficas de baixo nível.
+- `monc doc`: geração de documentação.
+- `monc test`: execução de testes.
 
 Essas ferramentas são propostas; seus comandos e formatos ainda não foram fechados.
 
