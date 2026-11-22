@@ -6,7 +6,7 @@
 
 namespace moon {
 
-enum class TokenKind { Identifier, Integer, String, Character, Symbol, EndOfFile, Invalid };
+enum class TokenKind { Identifier, Integer, Float, String, Character, Symbol, EndOfFile, Invalid };
 
 struct Token {
     TokenKind kind;
