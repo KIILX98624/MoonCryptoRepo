@@ -1,6 +1,7 @@
 #external "stdlib.h"{
     playCodeC {
         int abs(int x);
+        void srand(unsigned int seed);
         int rand(void);
         int atoi(char* texto);
     }
@@ -10,6 +11,7 @@ fn main[] -> Int32 {
     // let x: Int32 = -51;
     // let y: Int32 = abs(x);
     // print["The absolute value of "+ x + " is "+ y];
+    let seed: Int32 = srand(12345);
     let z: Int32 = rand(); 
     print["The Random Number is: " + z + "!"];
 
