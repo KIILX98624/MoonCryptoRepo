@@ -1,6 +1,6 @@
-# Roteiro de evolução da MoonCrypto
+# Roteiro de evolução da MonC
 
-Este documento reúne as decisões de design, recursos de criptografia, fundamentos da linguagem e correções de documentação identificados na revisão. Ele serve como checklist para planejar a evolução da MoonCrypto. Os itens descrevem lacunas e decisões a tomar; não significam que tudo já esteja implementado.
+Este documento reúne as decisões de design, recursos de criptografia, fundamentos da linguagem e correções de documentação identificados na revisão. Ele serve como checklist para planejar a evolução da MonC. Os itens descrevem lacunas e decisões a tomar; não significam que tudo já esteja implementado.
 
 ## 1. Decisões de design que ficam caras depois
 
