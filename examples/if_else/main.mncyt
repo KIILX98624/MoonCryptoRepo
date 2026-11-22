@@ -1,9 +1,0 @@
-fn main[] -> Int32 {
-    if (2 > 1) {
-        print["if funcionou"];
-    } else {
-        print["else funcionou"];
-    }
-
-    return 0;
-}

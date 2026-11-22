@@ -1,5 +1,0 @@
-#external "math"
-
-fn main[] -> Int32 {
-    
-}
