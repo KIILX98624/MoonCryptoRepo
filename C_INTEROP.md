@@ -1,10 +1,43 @@
 # Interoperabilidade C da MonC
 
-## Objetivo
+## Estado atual
 
-A interoperabilidade C permitirá declarar funções de cabeçalhos C e chamá-las pela MonC, mantendo o código C declarado dentro de um bloco explícito `playCodeC`.
+A MonC já consegue declarar protótipos de funções C dentro de `#external` e chamá-los pelo runtime. Nesta etapa, as bibliotecas reconhecidas são:
 
-## Sintaxe planejada
+- `math.h`: biblioteca matemática nativa (`libm` em sistemas POSIX ou runtime matemático do Windows).
+- `stdlib.h`: biblioteca C padrão do sistema.
+
+As chamadas C usam parênteses, como na linguagem C. As funções nativas da MonC continuam usando colchetes, por exemplo `print[resultado]`.
+
+## Bibliotecas e funções disponíveis
+
+### `math.h`
+
+O runtime aceita funções com retorno `float` ou `double`, de zero a dois parâmetros do mesmo tipo declarado no retorno. As funções já usadas nos exemplos e testes são:
+
+| Função | Protótipo C | Uso |
+|---|---|---|
+| `sqrt` | `double sqrt(double value)` | Raiz quadrada |
+| `pow` | `double pow(double base, double exponent)` | Potência |
+| `sin` | `double sin(double value)` | Seno |
+
+A regra de assinatura também permite outros símbolos da biblioteca matemática que respeitem o mesmo formato e estejam disponíveis na biblioteca nativa do sistema. Isso não significa que todo o conteúdo de `math.h` esteja implementado: macros, tipos especiais, parâmetros mistos e outras assinaturas ainda não são aceitos.
+
+### `stdlib.h`
+
+| Função | Protótipo C | Estado |
+|---|---|---|
+| `abs` | `int abs(int value)` | Implementada |
+| `atoi` | `int atoi(const char* text)` | Implementada |
+| `rand` | `int rand(void)` | Implementada |
+| `srand` | `void srand(unsigned int seed)` | Implementada |
+| `malloc` | `void* malloc(size_t size)` | Implementada |
+| `free` | `void free(void* ptr)` | Implementada |
+| `NULL` | constante/valor de ponteiro nulo da MonC | Implementado |
+
+`atof`, `atol` e `atoll` ainda não estão implementadas nesta versão documentada.
+
+### Exemplo completo
 
 ```monc
 #external "math.h" {
@@ -15,42 +48,74 @@ A interoperabilidade C permitirá declarar funções de cabeçalhos C e chamá-l
     }
 }
 
-let resultado: Float64 = sqrt(25.0);
-print[resultado];
+#external "stdlib.h" {
+    playCodeC {
+        int abs(int value);
+        int atoi(const char* text);
+        int rand(void);
+        void srand(unsigned int seed);
+        void* malloc(size_t size);
+        void free(void* ptr);
+    }
+}
+
+fn main[] -> Int32 {
+    let raiz: Float64 = sqrt(25.0);
+    let potencia: Float64 = pow(2.0, 5.0);
+    let seno: Float64 = sin(0.0);
+    let absoluto: Int32 = abs(-17);
+    let numero: Int32 = atoi("123");
+
+    srand(123);
+    let aleatorio: Int32 = rand();
+
+    let memoria = malloc(64);
+    free(memoria);
+    free(NULL);
+
+    print["sqrt=" + raiz];
+    print["pow=" + potencia];
+    print["sin=" + seno];
+    print["abs=" + absoluto];
+    print["atoi=" + numero];
+    print["rand=" + aleatorio];
+    print["malloc/free/NULL funcionando"];
+
+    return 0;
+}
 ```
 
-O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. A implementação mapeia `math.h` para a biblioteca matemática nativa e `stdlib.h` para a biblioteca C padrão do sistema. Chamadas `float`/`double` e `int` são resolvidas dinamicamente. A interoperabilidade inicial também aceita listas vazias declaradas como `void`, ponteiros para `char` em parâmetros e conversão de `String` MonC para `const char*` ao chamar `atoi`.
+## Ponteiros e memória
 
-## Tipos numéricos
+A primeira integração de ponteiros suporta o retorno de `void* malloc(size_t)`, a passagem de `void*` para `free` e o valor `NULL`. O runtime representa esses valores como ponteiros.
 
-| MonC | Representação | Tipo C correspondente |
-|---|---|---|
-| `Float32` | IEEE-754 binary32 | `float` |
-| `Double32` | Alias de binary32 | `float` |
-| `Float64` | IEEE-754 binary64 | `double` |
-| `Double64` | Alias de binary64 | `double` |
+Limites importantes:
 
-Os aliases preservam compatibilidade de representação. O runtime já armazena e opera com valores de ponto flutuante; a validação automatizada de compilação está sendo adicionada.
+- A MonC ainda não oferece um sistema geral de ponteiros C.
+- Não há suporte geral para desreferenciar ponteiros, fazer aritmética de ponteiros ou converter livremente entre tipos de ponteiro.
+- `free(NULL)` é aceito e segue a semântica definida pela biblioteca C.
+- Depois de `free(ptr)`, o programa não deve reutilizar o ponteiro. A linguagem ainda não verifica automaticamente use-after-free ou double-free.
+- `malloc` recebe um inteiro não negativo compatível com `size_t`; falha de alocação é reportada pelo runtime.
 
-## Mapeamento C inicial
+## Como funciona
 
-| Tipo C | Tipo MonC proposto |
-|---|---|
-| `void` | `Void` |
-| `float` | `Float32` |
-| `double` | `Float64` |
-| `char` | `Char` |
-| `int` | `Int32` (sujeito à validação da ABI da plataforma) |
+O parser registra os protótipos declarados em `playCodeC`. Em tempo de execução, a MonC procura os símbolos na biblioteca nativa do sistema:
 
-## Estado da implementação
+- Windows: carrega o runtime C do Windows (`ucrtbase.dll`, com fallback para `msvcrt.dll`) e resolve os símbolos.
+- Sistemas POSIX suportados pelo runtime: usa `dlopen` e `dlsym` para localizar `libm` ou `libc`.
 
-1. **Lexer:** reconhece literais decimais e notação exponencial como tokens `float`.
-2. **Runtime Float:** armazena valores binary32/binary64, aplica os aliases e executa `+`, `-`, `*`, `/` e `%` em expressões de ponto flutuante. A suíte de smoke test inclui literais, aliases, operações e notação exponencial.
-3. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
-4. **Runtime C inicial:** chamadas com parênteses para protótipos `float`/`double` de `math.h`, com zero a dois parâmetros do mesmo tipo, são resolvidas por `LoadLibrary`/`GetProcAddress` no Windows ou `dlopen`/`dlsym` em sistemas POSIX.
-5. **Parser de protótipos C:** reconhece `void` como lista vazia (`rand(void)`), declaradores de ponteiro em parâmetros (`char*` e `const char*`) e mantém o tipo declarado no AST.
-6. **Runtime de strings C:** `stdlib.h` aceita `atoi(char*)` ou `atoi(const char*)` com um argumento `String` da MonC, passado como buffer temporário terminado em `\0`.
+A disponibilidade de cada símbolo depende da biblioteca e da ABI fornecidas pelo sistema operacional. A implementação não incorpora uma cópia própria dessas bibliotecas.
 
 ## Limitações atuais
 
-A etapa atual suporta `math.h` com retorno/parâmetros `float` ou `double`; `stdlib.h` com retorno `int` e zero a dois parâmetros `int`; além de `atoi` com um parâmetro `char*` ou `const char*` recebido como `String` MonC. Ainda não aceita retorno `void`, ponteiros genéricos ou ponteiros para tipos diferentes de `char`, structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias. A conversão `String` para ponteiro C está limitada ao parâmetro textual de `atoi` nesta etapa.
+Ainda não há suporte geral a:
+
+- `atof`, `atol`, `atoll`;
+- bibliotecas arbitrárias indicadas pelo usuário;
+- macros, `typedef`, structs C e unions;
+- funções variádicas, callbacks e ponteiros de função;
+- parâmetros C mistos ou assinaturas não listadas nesta documentação;
+- conversões gerais entre strings, buffers e ponteiros C;
+- desreferência e aritmética geral de ponteiros.
+
+A interoperabilidade está em evolução. Consulte esta tabela e os testes do repositório antes de considerar uma assinatura C como suportada.
