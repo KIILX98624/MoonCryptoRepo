@@ -8,6 +8,7 @@ const char* token_kind_name(TokenKind kind) {
     switch (kind) {
         case TokenKind::Identifier: return "identifier";
         case TokenKind::Integer: return "integer";
+        case TokenKind::Float: return "float";
         case TokenKind::String: return "string";
         case TokenKind::Character: return "character";
         case TokenKind::Symbol: return "symbol";
@@ -49,7 +50,31 @@ std::vector<Token> lex_source(const std::string& source) {
         if (std::isdigit(static_cast<unsigned char>(c))) {
             const auto start = i;
             while (i < source.size() && std::isdigit(static_cast<unsigned char>(source[i]))) advance();
-            tokens.push_back({TokenKind::Integer, source.substr(start, i - start), start_line, start_column});
+
+            bool is_float = false;
+            if (i + 1 < source.size() && source[i] == '.' &&
+                std::isdigit(static_cast<unsigned char>(source[i + 1]))) {
+                is_float = true;
+                advance();
+                while (i < source.size() && std::isdigit(static_cast<unsigned char>(source[i]))) advance();
+            }
+
+            if (i < source.size() && (source[i] == 'e' || source[i] == 'E')) {
+                const std::size_t exponent_start = i;
+                advance();
+                if (i < source.size() && (source[i] == '+' || source[i] == '-')) advance();
+                const std::size_t digits_start = i;
+                while (i < source.size() && std::isdigit(static_cast<unsigned char>(source[i]))) advance();
+                if (digits_start == i) {
+                    tokens.push_back({TokenKind::Invalid, source.substr(start, i - start), start_line, start_column});
+                    continue;
+                }
+                is_float = true;
+                (void)exponent_start;
+            }
+
+            tokens.push_back({is_float ? TokenKind::Float : TokenKind::Integer,
+                              source.substr(start, i - start), start_line, start_column});
             continue;
         }
         if (c == '"' || c == '\'') {
