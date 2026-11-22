@@ -53,7 +53,7 @@ fn main[] -> Int32 {
 Teste o exemplo com:
 
 ```powershell
-.\moon.exe run examples\if_else ```(Erro descoberto)```
+.\monc.exe run Examples\Others\if_else.monc ```(Erro descoberto)```
 ```
 
 O resultado deve ser `if funcionou`. A implementação ainda é experimental e aceita apenas declarações `let` com valores inteiros e comparações simples.
@@ -106,7 +106,7 @@ O interpretador executa o formato `for` inteiro mostrado acima e laços `while [
 Teste o exemplo de `while` com:
 
 ```powershell
-.\moon.exe run examples\while ```(erro descoberto!!)```
+.\monc.exe run Examples\Others\while.monc ```(erro descoberto!!)```
 ```
 
 ### Módulos e Funções com `#external`
@@ -259,7 +259,7 @@ Exemplo de comandos ***planejados***:
 
 ```text
 moon build
-moon run
+monc run
 moon test
 ```
 
