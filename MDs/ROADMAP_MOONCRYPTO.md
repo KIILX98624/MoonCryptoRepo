@@ -119,7 +119,7 @@ Revisar o documento principal e exemplos para corrigir estes pontos:
 - reconciliar a afirmação de que criptografia ainda não está ligada ao interpretador com o fato de que SHA-256 já está integrado;
 - esclarecer que `.hex()` aparece no exemplo SHA-256 apesar de também ser listado como planejado, e indicar com precisão o que está implementado;
 - remover ou atualizar `const` da lista de próximos recursos, pois já está implementado;
-- explicar a diferença entre `monc` e `moon run`, incluindo quando cada comando deve ser usado;
+- explicar a diferença entre `monc run arquivo.monc` e `monc run pasta`, incluindo quando cada comando deve ser usado;
 - documentar como compilar e executar em Linux e macOS, além dos exemplos existentes em PowerShell;
 - esclarecer o que significa “Editor / interpretador” no estado do projeto: suporte do editor, parser, interpretador, compilador ou combinação deles.
 
