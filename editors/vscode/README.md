@@ -1,6 +1,6 @@
 # MoonCrypto Language Support for VS Code
 
-Language support for MoonCrypto source files (`.mncyt`): syntax highlighting for control flow including `if`, `else`, `while` and `for`, declarations such as `const`, `struct` and `class`, `//` and `/* */` comments, bracket matching, automatic indentation, snippets for `main[]`, functions, `const`, `struct`, `class`, `Bool`, `Bytes`, `ifelse`, `while`, `for`, and `print`, plus the MoonCrypto logo in the extension details.
+Language support for MoonCrypto source files (`.monc`): syntax highlighting for control flow including `if`, `else`, `while` and `for`, declarations such as `const`, `struct` and `class`, `//` and `/* */` comments, bracket matching, automatic indentation, snippets for `main[]`, functions, `const`, `struct`, `class`, `Bool`, `Bytes`, `ifelse`, `while`, `for`, and `print`, plus the MoonCrypto logo in the extension details.
 
 ## Install with the packaged extension (recommended)
 
