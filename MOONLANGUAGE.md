@@ -20,7 +20,7 @@ Anotações de tipo são verificadas no interpretador atual. Por exemplo, uma st
 | Tipo | Estado | Descrição |
 |---|---|---|
 | `Int32`, `Int64` | Implementado | Inteiros assinados com validação de faixa; tipos menores e sem sinal também são verificados quando declarados. |
-| `Float32`, `Float64`, `Double32`, `Double64` | Implementado no runtime inicial | `Float32`/`Double32` usam binary32; `Float64`/`Double64` usam binary64. Literais decimais e exponenciais, armazenamento, operações aritméticas básicas e validação de anotações estão implementados. A execução ainda precisa passar pela suíte de compilação/testes. |
+| `Float32`, `Float64`, `Double32`, `Double64` | Implementado no runtime inicial | `Float32`/`Double32` usam binary32; `Float64`/`Double64` usam binary64. Literais decimais e exponenciais, armazenamento, operações aritméticas básicas e validação de anotações estão implementados. |
 | `String`, `String32`, `String64` | Implementado | Texto UTF-8; os sufixos ainda aguardam semântica definitiva. |
 | `Char` | Implementado | Caractere. |
 | `Bool` | Implementado | Valores `true` e `false`; condições aceitam `&&`, `||` e `!`, sem conversão implícita de inteiros. |
