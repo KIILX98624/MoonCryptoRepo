@@ -71,9 +71,9 @@ bytes          = "Bytes" "[" [ integer { "," integer } ] "]" ;
 
 ## Módulo JSON nativo
 
-O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.mncyt` separado nem dependência externa.
+O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.monc` separado nem dependência externa.
 
-```mncyt
+```monc
 #external "json"
 
 fn main[] -> Int32 {
@@ -118,7 +118,7 @@ Ownership será verificado pelo compilador. Valores terão um único dono; refer
 
 ## Criptografia
 
-```mncyt
+```monc
 use crypto
 
 fn main[] -> Int32 {
@@ -133,7 +133,7 @@ fn main[] -> Int32 {
 
 O modelo inicial de erro explícito usa `Result`. Um resultado bem-sucedido pode ser desembrulhado; um erro não pode ser confundido com texto vazio:
 
-```mncyt
+```monc
 let resposta: Result = ok[42];
 if (resposta.is_ok[]) {
     print[resposta.unwrap[]];
@@ -144,7 +144,7 @@ Erros do interpretador usam `arquivo:linha:coluna: error: mensagem`, permitindo 
 
 O valor inteiro retornado por `main[]` é usado como código de saída do processo:
 
-```mncyt
+```monc
 fn main[] -> Int32 {
     return 7;
 }
@@ -157,12 +157,12 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-No Windows, o alvo `mooncyt` vincula BCrypt automaticamente. Em Linux e macOS, o CMake procura `OpenSSL::Crypto` e habilita o SHA-256 via EVP quando encontrado.
+No Windows, o alvo `monc` vincula BCrypt automaticamente. Em Linux e macOS, o CMake procura `OpenSSL::Crypto` e habilita o SHA-256 via EVP quando encontrado.
 
 O lexer inicial pode ser inspecionado com:
 
 ```powershell
-mooncyt lex arquivo.mncyt
+monc lex arquivo.monc
 ```
 
 Ele mostra tipo, linha, coluna e texto de cada token. O parser AST também valida a estrutura das funções antes da interpretação normal.
@@ -170,7 +170,7 @@ Ele mostra tipo, linha, coluna e texto de cada token. O parser AST também valid
 A primeira AST pode ser inspecionada com:
 
 ```powershell
-mooncyt ast arquivo.mncyt
+monc ast arquivo.monc
 ```
 
 Por enquanto ela lista funções, parâmetros e tipos de retorno.
