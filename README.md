@@ -17,12 +17,12 @@ O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md)
 Com um compilador C++20 disponível:
 
 ```sh
-g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o moon
-./monc examples/hello
-./monc examples/hello
+g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o monc
+./monc run caminho/para/main.monc
+./monc run caminho/para/main.monc
 ```
 
-No Windows, troque `./moon` por `monc.exe`. O primeiro comando retorna `main.monc`; o segundo exibe `Hello, MoonCrypto!`.
+No Windows, use `monc.exe run caminho\\para\\main.monc`.
 
 ### Comando global `monc`
 
@@ -248,7 +248,7 @@ Prioridades iniciais:
 
 ## 2. Execução e compilação
 
-O compilador, provisoriamente chamado `moon`, traduz arquivos `.monc` para código nativo. A proposta é usar LLVM como representação intermediária e deixar a vinculação final a cargo da toolchain da plataforma.
+O compilador, provisoriamente chamado `monc`, traduz arquivos `.monc` para código nativo. A proposta é usar LLVM como representação intermediária e deixar a vinculação final a cargo da toolchain da plataforma.
 
 ```text
 .monc → análise e verificação → LLVM IR → código objeto → linker → executável
