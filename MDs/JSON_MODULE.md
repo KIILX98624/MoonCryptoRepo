@@ -6,7 +6,7 @@
 
 Este documento propõe uma API JSON para a MoonCrypto com foco em interoperabilidade entre linguagens, leitura e gravação de arquivos e integração futura ao interpretador C++20.
 
-> **Importante:** as funções descritas aqui são uma proposta de API. O HoldMap fornecido não indica suporte atual a `use json`, `JsonValue` ou operações de arquivos. O exemplo `.mncyt` que acompanha este documento demonstra a sintaxe pretendida e não deve ser considerado executável no protótipo atual até que o módulo seja implementado.
+> **Importante:** as funções descritas aqui são uma proposta de API. O HoldMap fornecido não indica suporte atual a `use json`, `JsonValue` ou operações de arquivos. O exemplo `.monc` que acompanha este documento demonstra a sintaxe pretendida e não deve ser considerado executável no protótipo atual até que o módulo seja implementado.
 
 ---
 
