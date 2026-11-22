@@ -5,28 +5,28 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(mooncyt
+add_executable(monc
     src/main.cpp
     src/project.cpp
     src/lexer.cpp
     src/ast.cpp
 )
 
-target_include_directories(mooncyt PRIVATE src)
+target_include_directories(monc PRIVATE src)
 
 if(MSVC)
-    target_compile_options(mooncyt PRIVATE /W4 /permissive-)
+    target_compile_options(monc PRIVATE /W4 /permissive-)
 else()
-    target_compile_options(mooncyt PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(monc PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(WIN32)
-    target_link_libraries(mooncyt PRIVATE bcrypt)
+    target_link_libraries(monc PRIVATE bcrypt)
 else()
     find_package(OpenSSL QUIET COMPONENTS Crypto)
     if(OpenSSL_FOUND)
-        target_compile_definitions(mooncyt PRIVATE MOONCRYPTO_USE_OPENSSL=1)
-        target_link_libraries(mooncyt PRIVATE OpenSSL::Crypto)
+        target_compile_definitions(monc PRIVATE MOONCRYPTO_USE_OPENSSL=1)
+        target_link_libraries(monc PRIVATE OpenSSL::Crypto)
     else()
         message(WARNING "OpenSSL não encontrado: crypto.sha256 ficará indisponível neste alvo")
     endif()
