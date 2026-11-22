@@ -1,6 +1,6 @@
-# MoonCrypto — Holdmap da linguagem
+# MonC — Holdmap da linguagem
 
-Este documento resume os recursos disponíveis no protótipo atual do MoonCrypto (`.monc`). O projeto usa um interpretador experimental em C++20, com lexer e validação AST integrados; a geração de código nativo completo e o ownership checker ainda estão em evolução.
+Este documento resume os recursos disponíveis no protótipo atual do MonC (`.monc`). O projeto usa um interpretador experimental em C++20, com lexer e validação AST integrados; a geração de código nativo completo e o ownership checker ainda estão em evolução.
 
 As decisões formais da linguagem estão em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
@@ -29,7 +29,7 @@ As decisões formais da linguagem estão em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 | Faixa de inteiros | `UInt8`, `Int32`, etc. | Implementado |
 | Classes e structs | `class`, `struct` | Declaração reconhecida; tipos planejados |
 | Ownership | referências e empréstimos | Especificado; verificação planejada |
-| Criptografia oficial | `use crypto` e `crypto.*` | SHA-256 implementado; AES planejado |
+| Criptografia oficial | `use crypto` e `crypto.*` | SHA-256, HMAC-SHA-256 e bytes aleatórios implementados; AES/KDF planejados |
 
 ## Funções
 
@@ -53,7 +53,7 @@ Chamadas de função também usam colchetes: `somar[10, 20]`.
 
 ```monc
 let idade: Int32 = 18;
-let nome: String32 = "MoonCrypto";
+let nome: String32 = "MonC";
 let inicial: Char = 'M';
 
 idade = idade + 1;
@@ -81,7 +81,7 @@ O layout, instanciação, métodos e visibilidade desses tipos ainda serão defi
 
 ## Ownership
 
-O objetivo do MoonCrypto é verificar ownership no compilador: cada valor terá um proprietário, referências serão empréstimos temporários e referências mutáveis terão regras exclusivas. A implementação atual ainda não faz essa verificação; código inseguro deverá ser explicitamente marcado quando o modelo for implementado.
+O objetivo do MonC é verificar ownership no compilador: cada valor terá um proprietário, referências serão empréstimos temporários e referências mutáveis terão regras exclusivas. A implementação atual ainda não faz essa verificação; código inseguro deverá ser explicitamente marcado quando o modelo for implementado.
 
 Tipos atualmente usados pelo interpretador:
 
@@ -92,7 +92,7 @@ Tipos atualmente usados pelo interpretador:
 ## Saída com `print`
 
 ```monc
-print["Olá, MoonCrypto!"];
+print["Olá, MonC!"];
 print[nome];
 print["Idade: " + idade];
 ```
@@ -181,7 +181,7 @@ O arquivo externo deve estar disponível no projeto conforme as regras documenta
 
 ## Criptografia
 
-A API de criptografia será disponibilizada pelo módulo explícito `crypto`. Ela deverá usar uma biblioteca consolidada por baixo, com chaves opacas, aleatoriedade segura e formatos autenticados. A implementação ainda não está ligada ao interpretador.
+O módulo `crypto` já está parcialmente ligado ao interpretador: SHA-256, HMAC-SHA-256 e geração de bytes aleatórios estão disponíveis. KDF e cifragem autenticada continuam planejadas.
 
 ### Hash SHA-256
 
@@ -189,7 +189,7 @@ A API de criptografia será disponibilizada pelo módulo explícito `crypto`. El
 use crypto
 
 fn main[] -> Int32 {
-    let texto: String32 = "MoonCrypto";
+    let texto: String32 = "MonC";
     let h = crypto.sha256[texto];
     print["SHA-256: " + h.hex[]];
     return 0;
@@ -229,6 +229,17 @@ fn main[] -> Int32 {
 - `crypto.aes_encrypt` / `crypto.aes_decrypt`: API planejada para AEAD.
 - `hex()`: serialização planejada para hashes e dados cifrados.
 - Implementação própria de algoritmos: não permitida; usar biblioteca consolidada ou API criptográfica do sistema.
+
+## Interoperabilidade com C
+
+A MonC reconhece atualmente `math.h` e `stdlib.h` por meio de `#external` com bloco `playCodeC`.
+
+| Biblioteca | Recursos já disponíveis |
+|---|---|
+| `math.h` | `sqrt`, `pow`, `sin`; assinaturas simples `float`/`double` com até dois parâmetros do mesmo tipo. |
+| `stdlib.h` | `abs`, `atoi`, `rand`, `srand`, `malloc`, `free` e `NULL`. |
+
+`atof`, `atol` e `atoll` ainda não estão implementadas. Ponteiros são limitados ao suporte inicial de `void*`, `malloc`, `free` e `NULL`. Não há ainda ponteiros gerais nem verificação automática de uso após liberação. Veja [C_INTEROP.md](C_INTEROP.md).
 
 ## Comentários
 

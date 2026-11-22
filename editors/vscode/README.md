@@ -1,6 +1,6 @@
-# MoonCrypto Language Support for VS Code
+# MonC Language Support for VS Code
 
-Language support for MoonCrypto source files (`.monc`): syntax highlighting, comments, bracket matching, automatic indentation and snippets.
+Language support for MonC source files (`.monc`): syntax highlighting, comments, bracket matching, automatic indentation and snippets.
 
 > The current source extension is `.monc`. The old `.mncyt` extension is no longer used.
 
@@ -20,4 +20,4 @@ After installation, run **Developer: Reload Window** from the VS Code command pa
 
 You can also copy this `vscode` folder to your VS Code extensions directory (`%USERPROFILE%\.vscode\extensions`) and reload VS Code. For normal distribution, packaging as a VSIX is recommended.
 
-This extension provides editor support only. It does not include the MoonCrypto compiler or language diagnostics.
+This extension provides editor support only. It does not include the MonC compiler or language diagnostics.

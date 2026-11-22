@@ -1,10 +1,10 @@
-# MoonCrypto JSON Module
+# MonC JSON Module
 
 **Arquivo:** `JSON_MODULE.md`  
 **Módulo proposto:** `json`  
 **Status:** Especificação inicial, ainda não implementada no interpretador.
 
-Este documento propõe uma API JSON para a MoonCrypto com foco em interoperabilidade entre linguagens, leitura e gravação de arquivos e integração futura ao interpretador C++20.
+Este documento propõe uma API JSON para a MonC com foco em interoperabilidade entre linguagens, leitura e gravação de arquivos e integração futura ao interpretador C++20.
 
 > **Importante:** as funções descritas aqui são uma proposta de API. O HoldMap fornecido não indica suporte atual a `use json`, `JsonValue` ou operações de arquivos. O exemplo `.monc` que acompanha este documento demonstra a sintaxe pretendida e não deve ser considerado executável no protótipo atual até que o módulo seja implementado.
 
@@ -12,7 +12,7 @@ Este documento propõe uma API JSON para a MoonCrypto com foco em interoperabili
 
 ## 1. Objetivos
 
-O módulo deve permitir que programas MoonCrypto:
+O módulo deve permitir que programas MonC:
 
 - interpretem texto JSON;
 - convertam valores JSON em texto;
@@ -31,7 +31,7 @@ A importação proposta segue o padrão de módulo qualificado:
 use json
 ```
 
-Todas as chamadas usam colchetes, seguindo a regra atual da MoonCrypto:
+Todas as chamadas usam colchetes, seguindo a regra atual da MonC:
 
 ```monc
 json.parse[texto]
@@ -118,7 +118,7 @@ Construtores propostos:
 ```monc
 let objeto: JsonValue = json.object[];
 let lista: JsonValue = json.array[];
-let texto: JsonValue = json.string["MoonCrypto"];
+let texto: JsonValue = json.string["MonC"];
 let numero: JsonValue = json.number[42];
 let booleano: JsonValue = json.boolean[true];
 let nulo: JsonValue = json.null[];
@@ -129,7 +129,7 @@ A conversão numérica deve rejeitar valores não finitos (`NaN`, infinito posit
 ### 4.6 Consultar e alterar objetos
 
 ```monc
-json.set[objeto, "nome", json.string["MoonCrypto"]];
+json.set[objeto, "nome", json.string["MonC"]];
 let nome: JsonValue = json.get[objeto, "nome"];
 let existe: Bool = json.has[objeto, "nome"];
 json.remove[objeto, "nome"];
@@ -186,7 +186,7 @@ json.is_null[valor]
 
 ## 6. Erros e segurança
 
-O HoldMap e o roadmap indicam que o modelo formal de erros da MoonCrypto ainda precisa ser definido. Portanto, a primeira integração pode emitir diagnósticos de runtime padronizados, sem fingir que existe um tipo `Result` implementado.
+O HoldMap e o roadmap indicam que o modelo formal de erros da MonC ainda precisa ser definido. Portanto, a primeira integração pode emitir diagnósticos de runtime padronizados, sem fingir que existe um tipo `Result` implementado.
 
 Erros mínimos:
 
@@ -220,7 +220,7 @@ with open("conversor.json", "w", encoding="utf-8") as arquivo:
     json.dump(dados, arquivo, ensure_ascii=False, indent=4)
 ```
 
-A MoonCrypto deve conseguir ler esse arquivo com:
+A MonC deve conseguir ler esse arquivo com:
 
 ```monc
 use json
@@ -232,16 +232,16 @@ fn main[] -> Int32 {
 }
 ```
 
-O arquivo JSON não pertence ao Python nem à MoonCrypto. É um formato de intercâmbio compartilhado.
+O arquivo JSON não pertence ao Python nem à MonC. É um formato de intercâmbio compartilhado.
 
 ## 8. Recomendações para a implementação em C++20
 
 1. Escolher uma biblioteca C++ JSON consolidada e compatível com a licença do projeto.
-2. Encapsular a biblioteca atrás de `JsonValue`; não expor seus tipos C++ ao usuário da MoonCrypto.
+2. Encapsular a biblioteca atrás de `JsonValue`; não expor seus tipos C++ ao usuário da MonC.
 3. Registrar `json` como módulo nativo no mecanismo de módulos do interpretador.
 4. Adicionar os builtins e validar quantidade e tipos dos argumentos.
 5. Implementar leitura e gravação com `std::filesystem` e fluxos binários, respeitando UTF-8.
-6. Converter exceções da biblioteca em diagnósticos MoonCrypto estáveis, sem encerrar o processo abruptamente.
+6. Converter exceções da biblioteca em diagnósticos MonC estáveis, sem encerrar o processo abruptamente.
 7. Aplicar limites de tamanho e profundidade de aninhamento.
 8. Criar testes de ida e volta (`parse` → `stringify` → `parse`), arquivos inválidos, Unicode, arrays, objetos, números e erros de I/O.
 
@@ -265,8 +265,8 @@ A biblioteca escolhida deve ser avaliada quanto a manutenção, portabilidade, d
 A primeira versão será considerada utilizável quando:
 
 - um arquivo produzido por `json.dump` do Python puder ser lido;
-- a MoonCrypto puder serializar novamente os dados sem perder sua estrutura;
-- a MoonCrypto puder gravar um arquivo que o Python consiga abrir com `json.load`;
+- a MonC puder serializar novamente os dados sem perder sua estrutura;
+- a MonC puder gravar um arquivo que o Python consiga abrir com `json.load`;
 - strings Unicode, números, booleanos, `null`, arrays e objetos forem preservados;
 - erros de sintaxe e de I/O gerarem diagnósticos claros;
 - testes automatizados cobrirem os casos válidos e inválidos.
