@@ -297,3 +297,12 @@ O comando `monc lex` lista tokens com linha e coluna. Essa camada já existe, ma
 ## Verificação de tipos
 
 Anotações como `Int32`, `String32`, `Char`, `Bool` e `Bytes` são verificadas nas declarações e atribuições. Valores incompatíveis produzem diagnóstico com arquivo, linha e coluna.
+
+
+## Nota de modificação: identidade `.monc` (2026-11-21)
+
+- Extensão oficial dos arquivos-fonte: `.monc`.
+- Nome do executável/target CMake: `monc` (`monc.exe` no Windows).
+- Execução direta: `monc run caminho/para/main.monc`.
+- Execução por diretório de projeto: `monc run caminho/para/projeto`.
+- Exemplos e fixtures migrados para `.monc`; suporte de sintaxe do VS Code atualizado.
