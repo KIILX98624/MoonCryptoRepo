@@ -1684,7 +1684,12 @@ private:
                     return Value::make_int(static_cast<long long>(items.size()), "Int32");
                 }
                 if (fn_name == "array.push") {
-                    if (args.size() != 2 || (!args[0].array_element_type.empty() && args[0].array_element_type != "Inferred" && !value_matches_type(args[1], args[0].array_element_type))) return std::nullopt;
+                    if (args.size() != 2) return std::nullopt;
+                    if (!args[0].array_element_type.empty() && args[0].array_element_type != "Inferred") {
+                        if (!value_matches_type(args[1], args[0].array_element_type)) return std::nullopt;
+                    } else if (!items.empty() && items.front().type_name != args[1].type_name) {
+                        return std::nullopt;
+                    }
                     items.push_back(args[1]);
                     return Value::make_bool(true);
                 }
@@ -1700,7 +1705,11 @@ private:
                 }
                 if (fn_name == "array.set") {
                     if (args.size() != 3 || args[1].kind != ValueKind::Integer || args[1].int_val < 0 || static_cast<std::size_t>(args[1].int_val) >= items.size()) return std::nullopt;
-                    if (!args[0].array_element_type.empty() && args[0].array_element_type != "Inferred" && !value_matches_type(args[2], args[0].array_element_type)) return std::nullopt;
+                    if (!args[0].array_element_type.empty() && args[0].array_element_type != "Inferred") {
+                        if (!value_matches_type(args[2], args[0].array_element_type)) return std::nullopt;
+                    } else if (!items.empty() && items.front().type_name != args[2].type_name) {
+                        return std::nullopt;
+                    }
                     items[static_cast<std::size_t>(args[1].int_val)] = args[2];
                     return Value::make_bool(true);
                 }
