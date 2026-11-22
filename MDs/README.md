@@ -1,4 +1,4 @@
-# MoonCrypto — Especificação técnica inicial v0.1
+# MonC — Linguagem de programação v0.1
 
 > A especificação atual de sintaxe, tipos, EBNF, imports, overflow, bytes, erros e ownership está em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
@@ -32,7 +32,7 @@ Use o nome real do arquivo, sem escrever os símbolos `<` e `>`:
 monc run caminho\para\programa.monc
 ```
 
-O binário está em `C:\Program Files\MoonCrypto\monc.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `monc` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
+O binário está em `C:\Program Files\MonC\monc.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `monc` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
 
 O executável configura a saída do console do Windows como UTF-8, permitindo imprimir caracteres como `é` corretamente.
 
@@ -68,7 +68,7 @@ O interpretador aceita variáveis locais com `let`, reatribuições e comparaç�
 
 ```cpp
 fn main[] -> Int32 {
-    let titulo: String32 = "MoonCrypto";
+    let titulo: String32 = "MonC";
     let descricao: String64 = "Linguagem nativa com foco em segurança";
     let letra: Char = 'M';
     let a: Int32 = 10;
@@ -129,7 +129,7 @@ fn saudar[nome: String32] -> Int32 {
 #external "matematica"
 
 fn main[] -> Int32 {
-    saudar["MoonCrypto"];
+    saudar["MonC"];
     let s: Int32 = somar[15, 25];
     print["Soma: " + s];
     return 0;
@@ -151,7 +151,7 @@ O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e
 #external "json"
 
 fn main[] -> Int32 {
-    let documento: JsonValue = json.parse["{\"nome\":\"MoonCrypto\",\"versao\":2,\"ativo\":true}"];
+    let documento: JsonValue = json.parse["{\"nome\":\"MonC\",\"versao\":2,\"ativo\":true}"];
     let nome: String32 = json.get[documento, "nome"].as_string[];
     let versao: Int32 = json.get[documento, "versao"].as_int[];
 
@@ -176,7 +176,7 @@ Funções disponíveis:
 | `json.length[valor]` | Retorna o tamanho de array, objeto ou string. |
 | `json.new_object[]` / `json.new_array[]` | Cria um objeto ou array vazio. |
 | `json.null[]` | Cria o valor JSON `null`. |
-| `json.from_string[texto]` | Converte uma string MoonCrypto em valor JSON string. |
+| `json.from_string[texto]` | Converte uma string MonC em valor JSON string. |
 | `json.from_int[numero]` | Converte um inteiro em valor JSON number. |
 | `json.from_bool[bool]` | Converte um booleano em valor JSON boolean. |
 | `json.set[objeto, chave, valor]` | Define ou substitui uma propriedade de objeto. |
@@ -189,13 +189,13 @@ O parser aceita os tipos JSON padrão, escapes de string, escapes Unicode `\\uXX
 
 ### Criptografia com `use crypto`
 
-MoonCrypto terá um módulo criptográfico oficial. A sintaxe proposta é:
+MonC terá um módulo criptográfico oficial. A sintaxe proposta é:
 
 ```monc
 use crypto
 
 fn main[] -> Int32 {
-    let texto: String32 = "MoonCrypto";
+    let texto: String32 = "MonC";
     let h = crypto.sha256[texto];
     print["SHA-256: " + h.hex[]];
     return 0;
@@ -234,9 +234,63 @@ if (resposta.is_ok[]) {
 
 Comportamento implementado: prioriza `main.monc` na raiz; caso não exista, procura arquivos `.monc` com `init` no nome na raiz e em `src/`. A busca não é recursiva. Nenhum candidato gera erro, e múltiplos candidatos são listados como ambiguidade.
 
+## Comandos disponíveis no protótipo
+
+Com o executável `monc` compilado e acessível no PATH:
+
+| Comando | Função |
+|---|---|
+| `monc run caminho/para/arquivo.monc` | Executa um arquivo MonC. |
+| `monc run caminho/para/projeto` | Executa um projeto, localizando `main.monc` ou um único arquivo `init*.monc`. |
+| `monc lex caminho/para/arquivo.monc` | Mostra os tokens, com tipo, linha e coluna. |
+| `monc ast caminho/para/arquivo.monc` | Mostra a AST inicial reconhecida pelo parser. |
+
+Para compilar com CMake:
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+## Interoperabilidade com bibliotecas C
+
+A MonC já possui integração inicial com duas bibliotecas do sistema:
+
+- `math.h`: `sqrt`, `pow` e `sin` já estão declaradas nos exemplos/testes; o runtime aceita assinaturas simples de retorno/parâmetros `float` ou `double`.
+- `stdlib.h`: `abs`, `atoi`, `rand`, `srand`, `malloc`, `free` e `NULL`.
+
+Exemplo de declarações C:
+
+```monc
+#external "stdlib.h" {
+    playCodeC {
+        int atoi(const char* text);
+        int rand(void);
+        void srand(unsigned int seed);
+        void* malloc(size_t size);
+        void free(void* ptr);
+    }
+}
+
+fn main[] -> Int32 {
+    let numero: Int32 = atoi("123");
+    srand(123);
+    let aleatorio: Int32 = rand();
+    let memoria = malloc(64);
+    free(memoria);
+    free(NULL);
+    print[numero];
+    print[aleatorio];
+    return 0;
+}
+```
+
+Ainda não estão disponíveis `atof`, `atol` e `atoll`. A integração aceita apenas as assinaturas documentadas em [C_INTEROP.md](C_INTEROP.md), não a biblioteca C inteira.
+
 ## 1. Objetivos
 
-MoonCrypto será uma linguagem compilada para código nativo, com sintaxe familiar a quem conhece C++, mas com regras próprias para melhorar segurança e legibilidade.
+MonC será uma linguagem compilada para código nativo, com sintaxe familiar a quem conhece C++, mas com regras próprias para melhorar segurança e legibilidade.
 
 Prioridades iniciais:
 
@@ -279,7 +333,7 @@ const MAX_RETRIES: UInt32 = 3;
 
 fn main[] -> Int32 {
     let attempts: UInt32 = 0;
-    print["MoonCrypto"];
+    print["MonC"];
     return 0;
 }
 ```
@@ -292,7 +346,7 @@ fn checksum(data: &Bytes) -> Digest {
 }
 
 fn main[] -> Int32 {
-    let data = Bytes.from("MoonCrypto");
+    let data = Bytes.from("MonC");
     let digest = checksum(&data);
     print[digest.to_hex[]];
     return 0;
@@ -327,7 +381,7 @@ Também pode ser avaliado um modelo combinado. A decisão afetará chamadas entr
 
 ## 5. Bibliotecas e interoperabilidade
 
-MoonCrypto terá módulos próprios e suporte a dependências obtidas por Git. O lockfile deverá registrar revisões exatas para que outra máquina possa reconstruir as mesmas dependências.
+MonC terá módulos próprios e suporte a dependências obtidas por Git. O lockfile deverá registrar revisões exatas para que outra máquina possa reconstruir as mesmas dependências.
 
 ```toml
 [dependencies]
@@ -339,7 +393,7 @@ crypto-utils = {
 
 Para C, o compilador poderá oferecer declarações de funções com ABI C. Para C++, a estratégia inicial será adaptadores escritos em C que exponham interfaces estáveis. A vinculação C++ direta poderá ser avaliada depois, considerando compilador, ABI, sistema operacional e arquitetura.
 
-Isso aproveita bibliotecas populares de C e C++ sem exigir que MoonCrypto reproduza detalhes específicos de ABI C++.
+Isso aproveita bibliotecas populares de C e C++ sem exigir que MonC reproduza detalhes específicos de ABI C++.
 
 **Vantagens:** acesso amplo a bibliotecas existentes e menor acoplamento à ABI de um compilador C++ específico.
 
