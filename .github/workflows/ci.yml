@@ -10,7 +10,7 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  build-ci-and-test:
     strategy:
       fail-fast: false
       matrix:
@@ -21,10 +21,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -S . -B build
+        run: cmake -S . -B build-ci
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build-ci build-ci --config Release
 
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: ctest --test-dir build-ci -C Release --output-on-failure
