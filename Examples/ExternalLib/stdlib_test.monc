@@ -2,7 +2,7 @@
     playCodeC {
         int abs(int x);
         //int rand(void); erro!
-        //int atoi(char* texto) erro!
+        int atoi(char* texto);
     }
 }
 
@@ -15,7 +15,7 @@ fn main[] -> Int32 {
 
     let texto: Char[] = "123";
 
-    let num: Int32 = atoi(texto[]);
+    let num: Int32 = atoi(texto);
 
     print[num];
 
