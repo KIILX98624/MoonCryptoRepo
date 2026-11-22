@@ -12,7 +12,9 @@ string(STRIP "${actual}" actual)
 set(expected "sqrt=5
 pow=32
 sin=0
-abs=17")
+abs=17
+atoi=123
+rand=called")
 if(NOT actual STREQUAL expected)
     message(FATAL_ERROR "Unexpected C interop output.\nExpected:\n${expected}\nActual:\n${actual}")
 endif()
