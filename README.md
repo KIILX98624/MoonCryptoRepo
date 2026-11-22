@@ -6,7 +6,7 @@
 
 **Status:** proposta para revisão. A execução nativa, ownership verificado pelo compilador, suporte a Git e prioridades de portabilidade e interoperabilidade com C++ estão definidos como direção. O tratamento de erros continua em aberto.
 
-> **Estado do repositório:** protótipo nativo em C++20. `monc` resolve o arquivo de entrada e `monc` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc main.monc` é a interface direta recomendada.
+> **Estado do repositório:** protótipo nativo em C++20. `monc` resolve o arquivo de entrada e `monc` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc run caminho\\para\\main.monc` é a interface recomendada.
 
 ### VS Code
 
@@ -22,7 +22,7 @@ g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/l
 ./monc examples/hello
 ```
 
-No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.monc`; o segundo exibe `Hello, MoonCrypto!`.
+No Windows, troque `./moon` por `monc.exe`. O primeiro comando retorna `main.monc`; o segundo exibe `Hello, MoonCrypto!`.
 
 ### Comando global `monc`
 
