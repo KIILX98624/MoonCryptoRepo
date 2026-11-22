@@ -2,7 +2,7 @@
 
 ## Contexto
 
-MoonCrypto é uma linguagem de programação com arquivos-fonte `.mncyt`, inspirada em C++ e com foco em segurança, criptografia, portabilidade e interoperabilidade com C/C++.
+MoonCrypto é uma linguagem de programação com arquivos-fonte `.monc`, inspirada em C++ e com foco em segurança, criptografia, portabilidade e interoperabilidade com C/C++.
 
 O projeto ainda está em fase inicial. Não trate o protótipo atual como uma implementação completa da linguagem.
 
@@ -25,19 +25,19 @@ O projeto ainda está em fase inicial. Não trate o protótipo atual como uma im
 O executável `moon` é um protótipo em C++20. O comando global é usado com o nome real do arquivo, sem os símbolos `<` e `>`:
 
 ```powershell
-mooncyt examples\hello\main.mncyt
+monc examples\hello\main.monc
 ```
 
-O binário fica em `C:\Program Files\MoonCrypto\mooncyt.exe`.
+O binário fica em `C:\Program Files\MoonCrypto\monc.exe`.
 
 O console do Windows deve ser configurado para UTF-8 antes da saída de texto, para preservar acentos e outros caracteres Unicode.
 
 Atualmente ele:
 
-- Localiza `main.mncyt` na raiz do projeto.
-- Caso não encontre `main.mncyt`, procura um único arquivo `.mncyt` cujo nome contenha `init` na raiz ou em `src/`.
+- Localiza `main.monc` na raiz do projeto.
+- Caso não encontre `main.monc`, procura um único arquivo `.monc` cujo nome contenha `init` na raiz ou em `src/`.
 - Reporta erro quando não há candidato ou quando há mais de um.
-- Executa o comando `moon run` (ou `mooncyt`) com suporte a funções (`fn`), parâmetros, retorno de valores, chamada de funções como instruções ou em expressões, importação de módulos com `#external`, `print[...]`, inteiros (`Int32`/`Int64`), strings (`String32`/`String64`/`String`), caracteres (`Char`), reatribuições, condicionais `if`/`else`, laços `for` e `while` com `break` e `continue`.
+- Executa o comando `monc run` com suporte a funções (`fn`), parâmetros, retorno de valores, chamada de funções como instruções ou em expressões, importação de módulos com `#external`, `print[...]`, inteiros (`Int32`/`Int64`), strings (`String32`/`String64`/`String`), caracteres (`Char`), reatribuições, condicionais `if`/`else`, laços `for` e `while` com `break` e `continue`.
 - Ainda não possui lexer, parser, verificador de tipos, ownership checker ou geração de código nativo.
 
 ## Estrutura principal
@@ -46,7 +46,7 @@ Atualmente ele:
 src/main.cpp                         CLI do protótipo
 src/project.cpp                     Localização do ponto de entrada
 src/project.hpp                     API de resolução do projeto
-examples/hello/main.mncyt            Exemplo inicial
+examples/hello/main.monc            Exemplo inicial
 editors/vscode/                      Extensão de linguagem para VS Code
 editors/vscode/package.json          Manifesto da extensão
 editors/vscode/mooncrypto-icon.png   Ícone da extensão
@@ -83,7 +83,7 @@ Também existe configuração inicial em `CMakeLists.txt`.
 
 ## Extensão do VS Code
 
-A extensão fica em `editors/vscode/` e reconhece `.mncyt`.
+A extensão fica em `editors/vscode/` e reconhece `.monc`.
 
 Ela atualmente fornece:
 
@@ -102,7 +102,7 @@ npx.cmd @vscode/vsce package --allow-missing-repository --out mooncrypto-languag
 code --install-extension .\mooncrypto-language-0.1.1.vsix --force
 ```
 
-O campo `icon` do `package.json` controla o ícone da extensão na tela de extensões. Ele não define automaticamente um ícone para arquivos `.mncyt` no Explorer; isso exigiria um tema de ícones separado.
+O campo `icon` do `package.json` controla o ícone da extensão na tela de extensões. Ele não define automaticamente um ícone para arquivos `.monc` no Explorer; isso exigiria um tema de ícones separado.
 
 ## Regras de desenvolvimento
 
@@ -116,11 +116,11 @@ O campo `icon` do `package.json` controla o ícone da extensão na tela de exten
 - Use C++20 e mantenha os avisos do compilador habilitados.
 - Preserve a compatibilidade com Windows, Linux e macOS sempre que possível.
 - Não sobrescreva arquivos do usuário sem verificar o conteúdo existente.
-- Ao adicionar uma funcionalidade, atualize o `README.md` e forneça um exemplo `.mncyt` quando fizer sentido.
+- Ao adicionar uma funcionalidade, atualize o `README.md` e forneça um exemplo `.monc` quando fizer sentido.
 
 ## Próximas etapas sugeridas
 
-1. Criar lexer para tokens de `.mncyt`.
+1. Criar lexer para tokens de `.monc`.
 2. Criar parser para funções, blocos, chamadas `print` e controle de fluxo.
 3. Definir uma árvore sintática abstrata.
 4. Criar diagnóstico de erros com linha e coluna.
