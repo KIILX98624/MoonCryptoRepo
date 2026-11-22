@@ -1,10 +1,10 @@
 {
-  "name": "mooncrypto-language",
-  "displayName": "MoonCrypto Language Support",
-  "description": "Syntax highlighting and snippets for MoonCrypto (.monc) source files.",
+  "name": "monc-language",
+  "displayName": "MonC Language Support",
+  "description": "Syntax highlighting and snippets for Monc (.monc) source files.",
   "version": "1.5.5",
-  "publisher": "mooncrypto-project",
-  "icon": "mooncrypto-icon.png",
+  "publisher": "monc-project",
+  "icon": "monc-icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -15,10 +15,10 @@
   "contributes": {
     "languages": [
       {
-        "id": "mooncrypto",
+        "id": "monc",
         "aliases": [
-          "MoonCrypto",
-          "mooncrypto",
+          "MonC",
+          "MonC",
           "monc"
         ],
         "extensions": [
@@ -29,15 +29,15 @@
     ],
     "grammars": [
       {
-        "language": "mooncrypto",
+        "language": "monc",
         "scopeName": "source.monc",
-        "path": "./syntaxes/mooncrypto.tmLanguage.json"
+        "path": "./syntaxes/monc.tmLanguage.json"
       }
     ],
     "snippets": [
       {
-        "language": "mooncrypto",
-        "path": "./snippets/mooncrypto.code-snippets"
+        "language": "monc",
+        "path": "./snippets/monc.code-snippets"
       }
     ]
   }

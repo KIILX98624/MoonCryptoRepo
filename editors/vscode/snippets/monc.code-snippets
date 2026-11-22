@@ -7,11 +7,11 @@
       "    return 0;",
       "}"
     ],
-    "description": "Create a MoonCrypto main function"
+    "description": "Create a MonC main function"
   },
   "Print text": {
     "prefix": "print",
-    "body": "print[\"${1:Hello, MoonCrypto!}\"];",
+    "body": "print[\"${1:Hello, MonC!}\"];",
     "description": "Print a string literal"
   },
   "Function": {
@@ -89,7 +89,7 @@
       "    $0",
       "}"
     ],
-    "description": "Create a MoonCrypto while loop"
+    "description": "Create a MonC while loop"
   },
   "For": {
     "prefix": "for",
@@ -98,6 +98,6 @@
       "    $0",
       "}"
     ],
-    "description": "Create a MoonCrypto for loop"
+    "description": "Create a MonC for loop"
   }
 }
