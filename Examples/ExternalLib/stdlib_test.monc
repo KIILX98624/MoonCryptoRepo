@@ -12,7 +12,7 @@ fn main[] -> Int32 {
     srand(456);
     print[rand()];
 
-    srand(789);
+    srand(719);
     print[rand()];
 
 
