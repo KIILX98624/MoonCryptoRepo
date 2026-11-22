@@ -15,7 +15,7 @@ std::string lowercase(std::string value) {
 }
 
 bool is_source_file(const std::filesystem::path& path) {
-    return path.extension() == ".mncyt";
+    return path.extension() == ".monc";
 }
 
 void collect_init_files(const std::filesystem::path& directory,
@@ -45,7 +45,7 @@ EntryResolution resolve_entry(const std::filesystem::path& project_path) {
         return result;
     }
 
-    const auto main_file = result.project_root / "main.mncyt";
+    const auto main_file = result.project_root / "main.monc";
     if (std::filesystem::is_regular_file(main_file, ec) && !ec) {
         result.entry_file = main_file;
         return result;
@@ -58,9 +58,9 @@ EntryResolution resolve_entry(const std::filesystem::path& project_path) {
     if (result.candidates.size() == 1) {
         result.entry_file = result.candidates.front();
     } else if (result.candidates.empty()) {
-        result.error = "No entry point found. Add main.mncyt or one init*.mncyt file in the project root or src/.";
+        result.error = "No entry point found. Add main.monc or one init*.monc file in the project root or src/.";
     } else {
-        result.error = "Ambiguous entry point. Add main.mncyt or leave exactly one init*.mncyt candidate:";
+        result.error = "Ambiguous entry point. Add main.monc or leave exactly one init*.monc candidate:";
     }
     return result;
 }
