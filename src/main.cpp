@@ -32,6 +32,10 @@
 #include <openssl/rand.h>
 #endif
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 namespace {
 
 void configure_console_encoding() {
@@ -469,6 +473,12 @@ struct FunctionDef {
     std::vector<std::pair<std::string, std::string>> params;
     std::string return_type = "Void";
     std::string body;
+};
+
+struct CFunctionBinding {
+    std::string header;
+    std::string return_type;
+    std::vector<std::string> parameter_types;
 };
 
 std::optional<long long> checked_add(long long a, long long b) {
@@ -913,6 +923,17 @@ public:
                       << ": error: " << ast.error << '\n';
             return false;
         }
+        for (const auto& external : ast.program.externals) {
+            for (const auto& function : external.c_functions) {
+                CFunctionBinding binding;
+                binding.header = external.path;
+                binding.return_type = function.return_type;
+                for (const auto& parameter : function.parameters) {
+                    binding.parameter_types.push_back(parameter.type);
+                }
+                c_functions_[function.name] = std::move(binding);
+            }
+        }
         if (!parse_program()) return false;
         auto it = functions_.find("main");
         if (it == functions_.end()) {
@@ -1026,6 +1047,25 @@ private:
         }
         trim(path_str);
         if (path_str.empty()) return fail("empty path in #external");
+
+        // The AST pass in run() already collected the C prototypes.
+        // Consume the native declaration block without treating its header as a .monc file.
+        if (position_ < source_.size() && source_[position_] == '{') {
+            ++position_;
+            whitespace();
+            if (!word("playCodeC")) return fail("expected playCodeC block inside #external");
+            if (!expect('{')) return false;
+            int depth = 1;
+            while (position_ < source_.size() && depth > 0) {
+                if (source_[position_] == '{') ++depth;
+                else if (source_[position_] == '}') --depth;
+                ++position_;
+            }
+            if (depth != 0) return fail("unterminated playCodeC block");
+            if (!expect('}')) return false;
+            loaded_modules_.insert("@c:" + path_str);
+            return true;
+        }
 
         // "json" é um módulo nativo do interpretador, não um arquivo .monc.
         if (path_str == "json" || path_str == "json.monc") {
@@ -1224,6 +1264,125 @@ private:
         return args;
     }
 
+    std::optional<Value> call_c_function(const std::string& name, const std::vector<Value>& args) {
+        const auto found = c_functions_.find(name);
+        if (found == c_functions_.end()) return std::nullopt;
+        const auto& binding = found->second;
+        if (binding.header != "math.h") {
+            fail("C header '" + binding.header + "' has no native library mapping yet");
+            return std::nullopt;
+        }
+        if (binding.return_type != "double" && binding.return_type != "float") {
+            fail("C function '" + name + "' currently requires a float or double return type");
+            return std::nullopt;
+        }
+        if (binding.parameter_types.size() != args.size() || args.size() > 2) {
+            fail("C function '" + name + "' has an unsupported argument count");
+            return std::nullopt;
+        }
+        for (const auto& type : binding.parameter_types) {
+            if (type != binding.return_type) {
+                fail("C function '" + name + "' currently requires matching float/double parameter types");
+                return std::nullopt;
+            }
+        }
+        double values[2] = {0.0, 0.0};
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            if (args[i].kind == ValueKind::Float) values[i] = args[i].float_val;
+            else if (args[i].kind == ValueKind::Integer) values[i] = static_cast<double>(args[i].int_val);
+            else {
+                fail("C function '" + name + "' expects numeric arguments");
+                return std::nullopt;
+            }
+        }
+
+        double result = 0.0;
+#ifdef _WIN32
+        HMODULE library = LoadLibraryA("ucrtbase.dll");
+        if (!library) library = LoadLibraryA("msvcrt.dll");
+        if (!library) {
+            fail("could not load the Windows C runtime for math.h");
+            return std::nullopt;
+        }
+        FARPROC symbol = GetProcAddress(library, name.c_str());
+        if (!symbol) {
+            FreeLibrary(library);
+            fail("C symbol '" + name + "' was not found in the Windows C runtime");
+            return std::nullopt;
+        }
+        if (binding.return_type == "double") {
+            if (args.size() == 1) {
+                using Function = double(__cdecl*)(double);
+                result = reinterpret_cast<Function>(symbol)(values[0]);
+            } else if (args.size() == 2) {
+                using Function = double(__cdecl*)(double, double);
+                result = reinterpret_cast<Function>(symbol)(values[0], values[1]);
+            } else {
+                using Function = double(__cdecl*)();
+                result = reinterpret_cast<Function>(symbol)();
+            }
+        } else {
+            const float first = static_cast<float>(values[0]);
+            const float second = static_cast<float>(values[1]);
+            float float_result = 0.0f;
+            if (args.size() == 1) {
+                using Function = float(__cdecl*)(float);
+                float_result = reinterpret_cast<Function>(symbol)(first);
+            } else if (args.size() == 2) {
+                using Function = float(__cdecl*)(float, float);
+                float_result = reinterpret_cast<Function>(symbol)(first, second);
+            } else {
+                using Function = float(__cdecl*)();
+                float_result = reinterpret_cast<Function>(symbol)();
+            }
+            result = float_result;
+        }
+        FreeLibrary(library);
+#else
+        void* library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
+        if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+        if (!library) {
+            fail("could not load libm for math.h");
+            return std::nullopt;
+        }
+        void* symbol = dlsym(library, name.c_str());
+        if (!symbol) {
+            dlclose(library);
+            fail("C symbol '" + name + "' was not found in libm");
+            return std::nullopt;
+        }
+        if (binding.return_type == "double") {
+            if (args.size() == 1) {
+                using Function = double(*)(double);
+                result = reinterpret_cast<Function>(symbol)(values[0]);
+            } else if (args.size() == 2) {
+                using Function = double(*)(double, double);
+                result = reinterpret_cast<Function>(symbol)(values[0], values[1]);
+            } else {
+                using Function = double(*)();
+                result = reinterpret_cast<Function>(symbol)();
+            }
+        } else {
+            const float first = static_cast<float>(values[0]);
+            const float second = static_cast<float>(values[1]);
+            float float_result = 0.0f;
+            if (args.size() == 1) {
+                using Function = float(*)(float);
+                float_result = reinterpret_cast<Function>(symbol)(first);
+            } else if (args.size() == 2) {
+                using Function = float(*)(float, float);
+                float_result = reinterpret_cast<Function>(symbol)(first, second);
+            } else {
+                using Function = float(*)();
+                float_result = reinterpret_cast<Function>(symbol)();
+            }
+            result = float_result;
+        }
+        dlclose(library);
+#endif
+        return Value::make_float(result, binding.return_type == "float" ? "Float32" : "Float64");
+    }
+
     std::optional<Value> call_function(const std::string& name, const std::vector<Value>& args) {
         auto it = functions_.find(name);
         if (it == functions_.end()) {
@@ -1239,6 +1398,7 @@ private:
 
         MiniInterpreter func_interp(def.body, path_);
         func_interp.functions_ = functions_;
+        func_interp.c_functions_ = c_functions_;
         func_interp.loaded_modules_ = loaded_modules_;
         func_interp.variables_ = variables_;
         func_interp.constants_ = constants_;
@@ -2040,6 +2200,16 @@ private:
             }
         }
 
+        const auto c_open_pos = text.find('(');
+        if (c_open_pos != std::string::npos && text.back() == ')') {
+            std::string c_name = text.substr(0, c_open_pos);
+            trim(c_name);
+            if (c_functions_.find(c_name) != c_functions_.end()) {
+                const auto args = parse_argument_list(text.substr(c_open_pos + 1, text.size() - c_open_pos - 2));
+                return call_c_function(c_name, args);
+            }
+        }
+
         if (moved_variables_.find(text) != moved_variables_.end()) {
             fail("use of moved value '" + text + "'");
             return std::nullopt;
@@ -2349,6 +2519,7 @@ private:
 
             MiniInterpreter iteration(body, path_);
             iteration.functions_ = functions_;
+            iteration.c_functions_ = c_functions_;
             iteration.loaded_modules_ = loaded_modules_;
             iteration.variables_ = variables_;
             if (!iteration.parse_block(true, false)) return false;
@@ -2402,6 +2573,7 @@ private:
         for (long long value = *initial; value < *limit; value += *increment) {
             MiniInterpreter iteration(body, path_);
             iteration.functions_ = functions_;
+            iteration.c_functions_ = c_functions_;
             iteration.loaded_modules_ = loaded_modules_;
             iteration.variables_ = variables_;
             iteration.variables_[name] = Value::make_int(value);
@@ -2700,6 +2872,7 @@ private:
     std::unordered_set<std::string> moved_variables_;
     std::unordered_set<std::string> constants_;
     std::unordered_map<std::string, FunctionDef> functions_;
+    std::unordered_map<std::string, CFunctionBinding> c_functions_;
     std::unordered_set<std::string> loaded_modules_;
     std::vector<std::string> messages_;
     Value return_value_;
