@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -331,7 +332,8 @@ enum class ValueKind {
     Bytes,
     Array,
     Json,
-    Result
+    Result,
+    Pointer
 };
 
 struct Value {
@@ -348,6 +350,7 @@ struct Value {
     std::shared_ptr<JsonNode> json_val;
     bool result_ok = false;
     std::shared_ptr<Value> result_value;
+    void* pointer_val = nullptr;
 
     static Value make_int(long long v, std::string type = "Int32") {
         Value val;
@@ -415,6 +418,14 @@ struct Value {
         return val;
     }
 
+    static Value make_pointer(void* pointer) {
+        Value val;
+        val.kind = ValueKind::Pointer;
+        val.type_name = "Pointer";
+        val.pointer_val = pointer;
+        return val;
+    }
+
     static Value make_result_ok(Value value) {
         Value result;
         result.kind = ValueKind::Result;
@@ -463,6 +474,12 @@ struct Value {
             case ValueKind::Json: return json_serialize(json_val);
             case ValueKind::Result:
                 return result_value ? result_value->to_string() : "";
+            case ValueKind::Pointer: {
+                if (!pointer_val) return "NULL";
+                std::ostringstream out;
+                out << pointer_val;
+                return out.str();
+            }
         }
         return "";
     }
@@ -545,6 +562,7 @@ bool value_matches_type(const Value& value, const std::string& type_name) {
         }
         return true;
     }
+    if (type_name == "Pointer" || type_name == "void*" || type_name == "char*" || type_name == "const char*") return value.kind == ValueKind::Pointer;
     if (type_name == "Json" || type_name == "JsonValue") return value.kind == ValueKind::Json;
     if (type_name == "Result" || type_name.rfind("Result<", 0) == 0) return value.kind == ValueKind::Result;
     if (type_name.rfind("Int", 0) == 0 || type_name.rfind("UInt", 0) == 0) {
@@ -1282,21 +1300,72 @@ private:
 
         const bool float_signature = binding.return_type == "float" || binding.return_type == "double";
         const bool int_signature = binding.return_type == "int";
-        if ((!float_signature && !int_signature) ||
-            (is_math && !float_signature) || (is_stdlib && !int_signature)) {
+        const bool void_signature = binding.return_type == "void";
+        const bool malloc_signature = is_stdlib && binding.return_type == "void*" && name == "malloc" &&
+            args.size() == 1 && binding.parameter_types.size() == 1 && binding.parameter_types[0] == "size_t";
+        const bool free_signature = is_stdlib && void_signature && name == "free" &&
+            args.size() == 1 && binding.parameter_types.size() == 1 && binding.parameter_types[0] == "void*";
+        const bool srand_signature =
+            is_stdlib && void_signature && args.size() == 1 &&
+            binding.parameter_types.size() == 1 &&
+            binding.parameter_types[0] == "unsigned int";
+        const bool string_pointer_signature =
+            is_stdlib && int_signature && args.size() == 1 &&
+            binding.parameter_types.size() == 1 &&
+            (binding.parameter_types[0] == "char*" || binding.parameter_types[0] == "const char*");
+        if ((!float_signature && !int_signature && !srand_signature && !malloc_signature && !free_signature) ||
+            (is_math && !float_signature) ||
+            (is_stdlib && !int_signature && !srand_signature && !malloc_signature && !free_signature)) {
             fail("C function '" + name + "' has an unsupported signature for header '" + binding.header + "'");
             return std::nullopt;
         }
-        for (const auto& type : binding.parameter_types) {
-            if (type != binding.return_type) {
-                fail("C function '" + name + "' currently requires parameters matching its return type");
-                return std::nullopt;
+        if (free_signature && args[0].kind != ValueKind::Pointer) {
+            fail("free expects a Pointer or NULL");
+            return std::nullopt;
+        }
+        if (!string_pointer_signature && !srand_signature && !malloc_signature && !free_signature) {
+            for (const auto& type : binding.parameter_types) {
+                if (type != binding.return_type) {
+                    fail("C function '" + name + "' currently requires parameters matching its return type");
+                    return std::nullopt;
+                }
             }
+        } else if (string_pointer_signature && args[0].kind != ValueKind::String) {
+            fail("C function '" + name + "' expects a MonC String for its char* parameter");
+            return std::nullopt;
         }
 
         double float_values[2] = {0.0, 0.0};
         int int_values[2] = {0, 0};
+        unsigned int unsigned_int_value = 0;
+        std::size_t allocation_size = 0;
         for (std::size_t i = 0; i < args.size(); ++i) {
+            if (malloc_signature) {
+                if (args[i].kind != ValueKind::Integer || args[i].int_val < 0 ||
+                    static_cast<unsigned long long>(args[i].int_val) >
+                        static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max())) {
+                    fail("malloc expects a non-negative size_t-compatible integer");
+                    return std::nullopt;
+                }
+                allocation_size = static_cast<std::size_t>(args[i].int_val);
+                continue;
+            }
+            if (free_signature) continue;
+            if (string_pointer_signature) {
+                // The std::string storage remains alive for the duration of the C call;
+                // c_str() supplies the null-terminated buffer expected by C.
+                continue;
+            }
+            if (srand_signature) {
+                if (args[i].kind != ValueKind::Integer || args[i].int_val < 0 ||
+                    static_cast<unsigned long long>(args[i].int_val) >
+                        static_cast<unsigned long long>(std::numeric_limits<unsigned int>::max())) {
+                    fail("C function 'srand' expects an integer in the unsigned int range");
+                    return std::nullopt;
+                }
+                unsigned_int_value = static_cast<unsigned int>(args[i].int_val);
+                continue;
+            }
             if (float_signature) {
                 if (args[i].kind == ValueKind::Float) float_values[i] = args[i].float_val;
                 else if (args[i].kind == ValueKind::Integer) float_values[i] = static_cast<double>(args[i].int_val);
@@ -1317,20 +1386,34 @@ private:
 
         double float_result = 0.0;
         int int_result = 0;
+        void* pointer_result = nullptr;
 #ifdef _WIN32
-        HMODULE library = LoadLibraryA(is_math ? "ucrtbase.dll" : "ucrtbase.dll");
-        if (!library) library = LoadLibraryA("msvcrt.dll");
+        // Keep the CRT modules loaded for the interpreter lifetime. Unloading
+        // a dynamically loaded CRT after each call can reset its internal state,
+        // making srand() appear ineffective when rand() is called later.
+        static HMODULE math_library = nullptr;
+        static HMODULE stdlib_library = nullptr;
+        HMODULE& library = is_math ? math_library : stdlib_library;
+        if (!library) {
+            library = LoadLibraryA("ucrtbase.dll");
+            if (!library) library = LoadLibraryA("msvcrt.dll");
+        }
         if (!library) {
             fail("could not load the Windows C runtime for header '" + binding.header + "'");
             return std::nullopt;
         }
         FARPROC symbol = GetProcAddress(library, name.c_str());
         if (!symbol) {
-            FreeLibrary(library);
             fail("C symbol '" + name + "' was not found in the Windows runtime");
             return std::nullopt;
         }
-        if (float_signature && binding.return_type == "double") {
+        if (malloc_signature) {
+            using Fn = void*(__cdecl*)(std::size_t);
+            pointer_result = reinterpret_cast<Fn>(symbol)(allocation_size);
+        } else if (free_signature) {
+            using Fn = void(__cdecl*)(void*);
+            reinterpret_cast<Fn>(symbol)(args[0].pointer_val);
+        } else if (float_signature && binding.return_type == "double") {
             if (args.size() == 1) { using Fn = double(__cdecl*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
             else if (args.size() == 2) { using Fn = double(__cdecl*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
             else { using Fn = double(__cdecl*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
@@ -1341,20 +1424,31 @@ private:
             else if (args.size() == 2) { using Fn = float(__cdecl*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
             else { using Fn = float(__cdecl*)(); r = reinterpret_cast<Fn>(symbol)(); }
             float_result = r;
+        } else if (srand_signature) {
+            using Fn = void(__cdecl*)(unsigned int);
+            reinterpret_cast<Fn>(symbol)(unsigned_int_value);
+        } else if (string_pointer_signature) {
+            using Fn = int(__cdecl*)(const char*);
+            int_result = reinterpret_cast<Fn>(symbol)(args[0].str_val.c_str());
         } else {
             if (args.size() == 1) { using Fn = int(__cdecl*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
             else if (args.size() == 2) { using Fn = int(__cdecl*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
             else { using Fn = int(__cdecl*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
-        FreeLibrary(library);
 #else
-        void* library = nullptr;
-        if (is_math) {
-            library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
-            if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
-        } else {
-            library = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
-            if (!library) library = dlopen("libc.so", RTLD_NOW | RTLD_LOCAL);
+        // Cache handles instead of closing after every call so stateful C
+        // library functions keep their state across MonC calls.
+        static void* math_library = nullptr;
+        static void* stdlib_library = nullptr;
+        void*& library = is_math ? math_library : stdlib_library;
+        if (!library) {
+            if (is_math) {
+                library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
+                if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+            } else {
+                library = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
+                if (!library) library = dlopen("libc.so", RTLD_NOW | RTLD_LOCAL);
+            }
         }
         if (!library) {
             fail("could not load native library for header '" + binding.header + "'");
@@ -1366,7 +1460,13 @@ private:
             fail("C symbol '" + name + "' was not found in the native library");
             return std::nullopt;
         }
-        if (float_signature && binding.return_type == "double") {
+        if (malloc_signature) {
+            using Fn = void*(*)(std::size_t);
+            pointer_result = reinterpret_cast<Fn>(symbol)(allocation_size);
+        } else if (free_signature) {
+            using Fn = void(*)(void*);
+            reinterpret_cast<Fn>(symbol)(args[0].pointer_val);
+        } else if (float_signature && binding.return_type == "double") {
             if (args.size() == 1) { using Fn = double(*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
             else if (args.size() == 2) { using Fn = double(*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
             else { using Fn = double(*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
@@ -1377,13 +1477,26 @@ private:
             else if (args.size() == 2) { using Fn = float(*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
             else { using Fn = float(*)(); r = reinterpret_cast<Fn>(symbol)(); }
             float_result = r;
+        } else if (srand_signature) {
+            using Fn = void(*)(unsigned int);
+            reinterpret_cast<Fn>(symbol)(unsigned_int_value);
+        } else if (string_pointer_signature) {
+            using Fn = int(*)(const char*);
+            int_result = reinterpret_cast<Fn>(symbol)(args[0].str_val.c_str());
         } else {
             if (args.size() == 1) { using Fn = int(*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
             else if (args.size() == 2) { using Fn = int(*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
             else { using Fn = int(*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
-        dlclose(library);
 #endif
+        if (malloc_signature) {
+            if (allocation_size != 0 && pointer_result == nullptr) {
+                fail("malloc failed to allocate the requested memory");
+                return std::nullopt;
+            }
+            return Value::make_pointer(pointer_result);
+        }
+        if (free_signature || srand_signature) return Value::make_int(0, "Void");
         if (int_signature) return Value::make_int(int_result, "Int32");
         return Value::make_float(float_result, binding.return_type == "float" ? "Float32" : "Float64");
     }
@@ -1450,17 +1563,19 @@ private:
         }
         const std::string name = source_.substr(start, position_ - start);
         const bool native_json_call = name.rfind("json.", 0) == 0;
-        if (functions_.find(name) == functions_.end() && !native_json_call) {
+        const bool c_external_call = c_functions_.find(name) != c_functions_.end();
+        if (functions_.find(name) == functions_.end() && !native_json_call && !c_external_call) {
             position_ = saved_pos;
             return false;
         }
         whitespace();
-        if (position_ >= source_.size() || source_[position_] != '[') {
+        const char expected_open = c_external_call ? '(' : '[';
+        if (position_ >= source_.size() || source_[position_] != expected_open) {
             position_ = saved_pos;
             return false;
         }
         char open_c = source_[position_++];
-        char close_c = ']';
+        char close_c = c_external_call ? ')' : ']';
 
         std::size_t arg_start = position_;
         int depth = 1;
@@ -1483,7 +1598,11 @@ private:
         if (!expect(';')) return fail("expected ';' after function call to '" + name + "'");
 
         if (active) {
-            if (native_json_call) {
+            if (c_external_call) {
+                auto args = parse_argument_list(arg_content);
+                auto result = call_c_function(name, args);
+                if (!result) return false;
+            } else if (native_json_call) {
                 auto result = evaluate_expression(name + "[" + arg_content + "]");
                 if (!result) return fail("invalid call to JSON module function '" + name + "'");
             } else {
@@ -1941,6 +2060,7 @@ private:
             return Value::make_char(*unesc_c);
         }
 
+        if (text == "NULL") return Value::make_pointer(nullptr);
         if (text == "true") return Value::make_bool(true);
         if (text == "false") return Value::make_bool(false);
 

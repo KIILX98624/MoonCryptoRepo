@@ -9,6 +9,11 @@
 #external "stdlib.h" {
     playCodeC {
         int abs(int value);
+        int atoi(char* text);
+        int rand(void);
+        void srand(unsigned int seed);
+        void* malloc(size_t size);
+        void free(void* ptr);
     }
 }
 
@@ -17,10 +22,26 @@ fn main[] -> Int32 {
     let power: Float64 = pow(2.0, 5.0);
     let wave: Float64 = sin(0.0);
     let absolute: Int32 = abs(-17);
+    let parsed: Int32 = atoi("123");
+    srand(123);
+    let random_first: Int32 = rand();
+    srand(123);
+    let random_second: Int32 = rand();
+    srand(456);
+    let random_different_seed: Int32 = rand();
 
     print["sqrt=" + root];
     print["pow=" + power];
     print["sin=" + wave];
     print["abs=" + absolute];
+    print["atoi=" + parsed];
+    print["rand_first=" + random_first];
+    print["rand_second=" + random_second];
+    print["rand_different_seed=" + random_different_seed];
+
+    let memory = malloc(64);
+    free(memory);
+    free(NULL);
+    print["malloc_free_NULL=ok"];
     return 0;
 }

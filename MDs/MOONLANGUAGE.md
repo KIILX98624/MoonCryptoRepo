@@ -1,4 +1,4 @@
-# Especificação de linguagem MoonCrypto v0.2
+# Especificação de linguagem MonC v0.2
 
 ## Decisões semânticas
 
@@ -14,6 +14,19 @@
 | Conversão | Conversões são explícitas. Concatenação de texto usa `+` e converte valores para texto somente nesse contexto. |
 
 Anotações de tipo são verificadas no interpretador atual. Por exemplo, uma string não pode inicializar `Int32`, e uma atribuição posterior deve manter o tipo declarado.
+
+## Interoperabilidade com C disponível no runtime
+
+A MonC já integra protótipos C simples por meio de `#external "math.h"` e `#external "stdlib.h"`. As chamadas declaradas em `playCodeC` usam parênteses, enquanto funções nativas da MonC usam colchetes.
+
+| Biblioteca | Funções/assinaturas disponíveis |
+|---|---|
+| `math.h` | `sqrt(double)`, `pow(double, double)`, `sin(double)`; runtime aceita assinaturas simples de `float`/`double` com até dois parâmetros do mesmo tipo. |
+| `stdlib.h` | `abs(int)`, `atoi(char*)`/ `atoi(const char*)`, `rand(void)`, `srand(unsigned int)`, `malloc(size_t)`, `free(void*)` e `NULL`. |
+
+`malloc` retorna um `void*` representado como ponteiro no runtime. `free(NULL)` é aceito. A linguagem ainda não possui ponteiros gerais, desreferência, aritmética de ponteiros ou verificação automática de use-after-free/double-free.
+
+Ainda não estão implementadas `atof`, `atol` e `atoll`. Também não há suporte geral a macros, typedefs, structs C, callbacks, funções variádicas, parâmetros mistos ou bibliotecas arbitrárias. Consulte [C_INTEROP.md](C_INTEROP.md) para protótipos e limitações detalhadas.
 
 ## Tipos atuais e planejados
 
@@ -77,7 +90,7 @@ O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e
 #external "json"
 
 fn main[] -> Int32 {
-    let documento: JsonValue = json.parse["{\"nome\":\"MoonCrypto\",\"versao\":2,\"ativo\":true}"];
+    let documento: JsonValue = json.parse["{\"nome\":\"MonC\",\"versao\":2,\"ativo\":true}"];
     let nome: String32 = json.get[documento, "nome"].as_string[];
     let versao: Int32 = json.get[documento, "versao"].as_int[];
 
@@ -102,7 +115,7 @@ Funções disponíveis:
 | `json.length[valor]` | Retorna o tamanho de array, objeto ou string. |
 | `json.new_object[]` / `json.new_array[]` | Cria um objeto ou array vazio. |
 | `json.null[]` | Cria o valor JSON `null`. |
-| `json.from_string[texto]` | Converte uma string MoonCrypto em valor JSON string. |
+| `json.from_string[texto]` | Converte uma string MonC em valor JSON string. |
 | `json.from_int[numero]` | Converte um inteiro em valor JSON number. |
 | `json.from_bool[bool]` | Converte um booleano em valor JSON boolean. |
 | `json.set[objeto, chave, valor]` | Define ou substitui uma propriedade de objeto. |
@@ -122,7 +135,7 @@ Ownership será verificado pelo compilador. Valores terão um único dono; refer
 use crypto
 
 fn main[] -> Int32 {
-    let texto = "MoonCrypto";
+    let texto = "MonC";
     let h = crypto.sha256[texto];
     print["SHA-256: " + h.hex[]];
     return 0;

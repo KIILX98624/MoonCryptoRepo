@@ -73,18 +73,56 @@ struct Parser {
         CFunctionNode function;
         function.return_type = current().text;
         ++index;
+        // Preserve pointer return declarators such as void* malloc(...).
+        while (take(TokenKind::Symbol, "*")) function.return_type += "*";
 
         if (!is(TokenKind::Identifier)) return fail("expected C function name");
         function.name = current().text;
         ++index;
         if (!take(TokenKind::Symbol, "(")) return fail("expected '(' after C function name");
 
-        if (!is(TokenKind::Symbol, ")")) {
+        if (is(TokenKind::Identifier, "void") &&
+            index + 1 < tokens.size() &&
+            tokens[index + 1].kind == TokenKind::Symbol &&
+            tokens[index + 1].text == ")") {
+            // In C, a lone void means that the function takes no parameters.
+            ++index;
+            ++index;
+        } else if (!is(TokenKind::Symbol, ")")) {
             while (true) {
-                if (!is(TokenKind::Identifier)) return fail("expected C parameter type");
                 CParameterNode parameter;
-                parameter.type = current().text;
+                if (is(TokenKind::Identifier, "const")) {
+                    parameter.type = "const ";
+                    ++index;
+                }
+
+                if (!is(TokenKind::Identifier)) return fail("expected C parameter type");
+                const std::string first_type_word = current().text;
+                parameter.type += first_type_word;
                 ++index;
+
+                // C type specifiers can contain multiple words, e.g. "unsigned int".
+                if ((first_type_word == "unsigned" || first_type_word == "signed") &&
+                    is(TokenKind::Identifier)) {
+                    parameter.type += " " + current().text;
+                    ++index;
+                } else if (first_type_word == "long" && is(TokenKind::Identifier, "long")) {
+                    parameter.type += " " + current().text;
+                    ++index;
+                    if (is(TokenKind::Identifier, "int")) {
+                        parameter.type += " " + current().text;
+                        ++index;
+                    }
+                } else if (first_type_word == "short" && is(TokenKind::Identifier, "int")) {
+                    parameter.type += " " + current().text;
+                    ++index;
+                }
+
+                // Preserve pointer declarators (char*, const char*, char**, ...).
+                while (take(TokenKind::Symbol, "*")) {
+                    parameter.type += "*";
+                }
+
                 if (!is(TokenKind::Identifier)) return fail("expected C parameter name");
                 parameter.name = current().text;
                 ++index;

@@ -1,6 +1,6 @@
-# Instruções do MoonCrypto
+# Instruções do MonC
 
-Leia o arquivo [`ARGENT.md`](ARGENT.md) na raiz antes de modificar este projeto. Ele contém o contexto completo, o estado atual, os comandos de build, as regras de segurança, a estrutura do repositório e as próximas etapas do MoonCrypto.
+Leia o arquivo [`ARGENT.md`](ARGENT.md) na raiz antes de modificar este projeto. O nome oficial da linguagem é **MonC**; o executável e o comando de terminal continuam sendo `monc`. Ele contém o contexto completo, o estado atual, os comandos de build, as regras de segurança, a estrutura do repositório e as próximas etapas do MonC.
 
 As instruções de `ARGENT.md` aplicam-se ao projeto inteiro e a todos os seus subdiretórios.
 

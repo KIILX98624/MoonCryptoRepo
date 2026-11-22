@@ -1,0 +1,26 @@
+#external "stdlib.h"{
+    playCodeC {
+        void srand(unsigned int seed);
+        int rand(void);
+        void* malloc(size_t size);
+        void free(void* ptr);
+    }
+}
+
+fn main[] -> Int32 {
+    srand(123);
+    print[rand()];
+
+    srand(456);
+    print[rand()];
+
+    srand(719);
+    print[rand()];
+
+    let memory = malloc(64);
+    free(memory);
+    free(NULL);
+    print["malloc/free/NULL funcionando!"];
+
+    return 0;
+}

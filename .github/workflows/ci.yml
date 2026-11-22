@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/monc-float-runtime
+      - feature/c-interop-void-pointers
   pull_request:
     branches:
       - main
