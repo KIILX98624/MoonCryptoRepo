@@ -174,9 +174,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </ProjectReference>
-    <ProjectReference Include="C:\Users\Gustavo Pertum\Documents\ChatGPT\Projects C++\MoonCrypto\MoonCryptoRepo\build\mooncyt.vcxproj">
-      <Project>{AE088767-650B-37FA-BCA5-62C1300FE232}</Project>
-      <Name>mooncyt</Name>
+    <ProjectReference Include="C:\Users\Gustavo Pertum\Documents\ChatGPT\Projects C++\MoonCrypto\MoonCryptoRepo\build\monc.vcxproj">
+      <Project>{F29FDA85-F64B-3DA6-B532-32E603BAAEB9}</Project>
+      <Name>monc</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
