@@ -6,7 +6,7 @@
 
 **Status:** proposta para revisão. A execução nativa, ownership verificado pelo compilador, suporte a Git e prioridades de portabilidade e interoperabilidade com C++ estão definidos como direção. O tratamento de erros continua em aberto.
 
-> **Estado do repositório:** protótipo nativo em C++20. `moon entry` resolve o arquivo de entrada e `moon run` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc arquivo.monc` é a interface direta recomendada.
+> **Estado do repositório:** protótipo nativo em C++20. `monc entry` resolve o arquivo de entrada e `monc run` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc run caminho/para/main.monc` é a interface direta recomendada.
 
 ### VS Code
 
@@ -18,18 +18,18 @@ Com um compilador C++20 disponível:
 
 ```sh
 g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o moon
-./moon entry examples/hello
-./moon run examples/hello
+./monc entry examples/hello
+./monc run caminho/para/main.monc
 ```
 
-No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.monc`; o segundo exibe `Hello, MoonCrypto!`.
+No Windows, use `monc.exe run caminho\\para\\main.monc`.
 
 ### Comando global `monc`
 
 Use o nome real do arquivo, sem escrever os símbolos `<` e `>`:
 
 ```powershell
-monc caminho\para\programa.monc
+monc run caminho\para\programa.monc
 ```
 
 O binário está em `C:\Program Files\MoonCrypto\monc.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `monc` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
