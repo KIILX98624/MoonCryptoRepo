@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -318,6 +319,7 @@ std::string json_type_name(const std::shared_ptr<JsonNode>& node) {
 
 enum class ValueKind {
     Integer,
+    Float,
     String,
     Char,
     Boolean,
@@ -331,6 +333,7 @@ struct Value {
     ValueKind kind = ValueKind::Integer;
     std::string type_name = "Int32";
     long long int_val = 0;
+    double float_val = 0.0;
     std::string str_val;
     char char_val = '\0';
     bool bool_val = false;
@@ -346,6 +349,15 @@ struct Value {
         val.kind = ValueKind::Integer;
         val.type_name = std::move(type);
         val.int_val = v;
+        return val;
+    }
+
+    static Value make_float(double v, std::string type = "Float64") {
+        Value val;
+        val.kind = ValueKind::Float;
+        val.type_name = std::move(type);
+        val.float_val = val.type_name == "Float32" || val.type_name == "Double32"
+            ? static_cast<double>(static_cast<float>(v)) : v;
         return val;
     }
 
@@ -419,6 +431,12 @@ struct Value {
     std::string to_string() const {
         switch (kind) {
             case ValueKind::Integer: return std::to_string(int_val);
+            case ValueKind::Float: {
+                std::ostringstream out;
+                out << std::setprecision(type_name == "Float32" || type_name == "Double32" ? 7 : 15)
+                    << std::defaultfloat << float_val;
+                return out.str();
+            }
             case ValueKind::String: return str_val;
             case ValueKind::Char: return std::string(1, char_val);
             case ValueKind::Boolean: return bool_val ? "true" : "false";
@@ -502,6 +520,8 @@ std::optional<std::pair<long long, unsigned long long>> integer_type_range(const
 
 bool value_matches_type(const Value& value, const std::string& type_name) {
     if (type_name.empty() || type_name == "Inferred") return true;
+    if (type_name == "Float32" || type_name == "Double32" ||
+        type_name == "Float64" || type_name == "Double64") return value.kind == ValueKind::Float;
     if (type_name == "Bool") return value.kind == ValueKind::Boolean;
     if (type_name == "Char") return value.kind == ValueKind::Char;
     if (type_name == "String" || type_name == "String32" || type_name == "String64") return value.kind == ValueKind::String;
@@ -1541,6 +1561,112 @@ private:
         return integer_operand(text);
     }
 
+    std::optional<double> floating_operand(std::string text) const {
+        trim(text);
+        if (text.empty()) return std::nullopt;
+        try {
+            std::size_t used = 0;
+            const double number = std::stod(text, &used);
+            if (used == text.size()) return number;
+        } catch (...) {}
+        if (moved_variables_.find(text) != moved_variables_.end()) return std::nullopt;
+        const auto found = variables_.find(text);
+        if (found != variables_.end()) {
+            if (found->second.kind == ValueKind::Float) return found->second.float_val;
+            if (found->second.kind == ValueKind::Integer) return static_cast<double>(found->second.int_val);
+            if (found->second.kind == ValueKind::Char) return static_cast<double>(found->second.char_val);
+        }
+        return std::nullopt;
+    }
+
+    bool is_float_expression(const std::string& text) const {
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (!std::isdigit(static_cast<unsigned char>(text[i]))) continue;
+            std::size_t j = i;
+            while (j < text.size() && std::isdigit(static_cast<unsigned char>(text[j]))) ++j;
+            if (j < text.size() && text[j] == '.' &&
+                j + 1 < text.size() && std::isdigit(static_cast<unsigned char>(text[j + 1]))) return true;
+            if (j < text.size() && (text[j] == 'e' || text[j] == 'E')) {
+                ++j;
+                if (j < text.size() && (text[j] == '+' || text[j] == '-')) ++j;
+                if (j < text.size() && std::isdigit(static_cast<unsigned char>(text[j]))) return true;
+            }
+            i = j ? j - 1 : i;
+        }
+        for (const auto& [name, value] : variables_) {
+            if (value.kind == ValueKind::Float && !name.empty() && text.find(name) != std::string::npos) return true;
+        }
+        return false;
+    }
+
+    std::optional<double> evaluate_float_expression(std::string text) const {
+        trim(text);
+        if (text.empty()) return std::nullopt;
+
+        // Remove a pair of parentheses only when it encloses the whole expression.
+        if (text.front() == '(' && text.back() == ')') {
+            int depth = 0;
+            bool encloses_all = true;
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                if (text[i] == '(') ++depth;
+                else if (text[i] == ')') --depth;
+                if (depth == 0 && i + 1 < text.size()) { encloses_all = false; break; }
+            }
+            if (encloses_all) return evaluate_float_expression(text.substr(1, text.size() - 2));
+        }
+
+        auto find_operator = [&](const std::string& ops) -> std::size_t {
+            int paren_depth = 0;
+            int bracket_depth = 0;
+            bool in_double = false, in_single = false, escaped = false;
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                const char c = text[i];
+                if (escaped) { escaped = false; continue; }
+                if (c == '\\') { escaped = true; continue; }
+                if (c == '"' && !in_single) { in_double = !in_double; continue; }
+                if (c == '\'' && !in_double) { in_single = !in_single; continue; }
+                if (in_double || in_single) continue;
+                if (c == '(') { ++paren_depth; continue; }
+                if (c == ')') { --paren_depth; continue; }
+                if (c == '[') { ++bracket_depth; continue; }
+                if (c == ']') { --bracket_depth; continue; }
+                if (paren_depth != 0 || bracket_depth != 0 || ops.find(c) == std::string::npos) continue;
+                if (i == 0) continue;
+                const char previous = text[i - 1];
+                if (previous == '+' || previous == '-' || previous == '*' || previous == '/' || previous == '%' ||
+                    previous == 'e' || previous == 'E') continue;
+                return i;
+            }
+            return std::string::npos;
+        };
+
+        std::size_t at = find_operator("+-");
+        if (at != std::string::npos) {
+            const auto left = evaluate_float_expression(text.substr(0, at));
+            const auto right = evaluate_float_expression(text.substr(at + 1));
+            if (!left || !right) return std::nullopt;
+            return text[at] == '+' ? *left + *right : *left - *right;
+        }
+
+        at = find_operator("*/%");
+        if (at != std::string::npos) {
+            const auto left = evaluate_float_expression(text.substr(0, at));
+            const auto right = evaluate_float_expression(text.substr(at + 1));
+            if (!left || !right) return std::nullopt;
+            if ((text[at] == '/' || text[at] == '%') && *right == 0.0) return std::nullopt;
+            if (text[at] == '*') return *left * *right;
+            if (text[at] == '/') return *left / *right;
+            return std::fmod(*left, *right);
+        }
+
+        if (text.front() == '+' || text.front() == '-') {
+            const auto value = evaluate_float_expression(text.substr(1));
+            if (!value) return std::nullopt;
+            return text.front() == '-' ? -*value : *value;
+        }
+        return floating_operand(text);
+    }
+
     std::optional<Value> evaluate_expression(std::string text) {
         trim(text);
         if (text.empty()) return std::nullopt;
@@ -1571,8 +1697,20 @@ private:
                 return Value::make_string(combined);
             }
             if (all_ok && !has_string_or_char && !part_values.empty()) {
+                const bool has_float = std::any_of(part_values.begin(), part_values.end(),
+                    [](const Value& value) { return value.kind == ValueKind::Float; });
+                if (has_float) {
+                    double sum = 0.0;
+                    for (const auto& pv : part_values) {
+                        if (pv.kind == ValueKind::Float) sum += pv.float_val;
+                        else if (pv.kind == ValueKind::Integer) sum += static_cast<double>(pv.int_val);
+                        else return std::nullopt;
+                    }
+                    return Value::make_float(sum);
+                }
                 long long sum = 0;
                 for (const auto& pv : part_values) {
+                    if (pv.kind != ValueKind::Integer) return std::nullopt;
                     const auto next = checked_add(sum, pv.int_val);
                     if (!next) return std::nullopt;
                     sum = *next;
@@ -1910,6 +2048,11 @@ private:
             return it->second;
         }
 
+        if (is_float_expression(text)) {
+            const auto float_val = evaluate_float_expression(text);
+            if (float_val) return Value::make_float(*float_val);
+        }
+
         auto int_val = evaluate_integer_expression(text);
         if (int_val) {
             return Value::make_int(*int_val);
@@ -1981,6 +2124,16 @@ private:
                 return std::nullopt;
             }
 
+            if (left->kind == ValueKind::Float || right->kind == ValueKind::Float) {
+                const double left_value = left->kind == ValueKind::Float ? left->float_val : static_cast<double>(left->int_val);
+                const double right_value = right->kind == ValueKind::Float ? right->float_val : static_cast<double>(right->int_val);
+                if (std::string(op) == "==") return left_value == right_value;
+                if (std::string(op) == "!=") return left_value != right_value;
+                if (std::string(op) == "<=") return left_value <= right_value;
+                if (std::string(op) == ">=") return left_value >= right_value;
+                if (std::string(op) == "<") return left_value < right_value;
+                return left_value > right_value;
+            }
             const long long left_value = left->int_val;
             const long long right_value = right->int_val;
             if (std::string(op) == "==") return left_value == right_value;
@@ -2097,6 +2250,9 @@ private:
             if (!value_matches_type(*val, type_name)) return fail("value does not match declared type '" + type_name + "' for '" + name + "'");
             Value v = *val;
             v.type_name = type_name;
+            if (v.kind == ValueKind::Float && (type_name == "Float32" || type_name == "Double32")) {
+                v.float_val = static_cast<double>(static_cast<float>(v.float_val));
+            }
             if (v.kind == ValueKind::Array && type_name.rfind("Array<", 0) == 0 && type_name.back() == '>') {
                 v.array_element_type = type_name.substr(6, type_name.size() - 7);
             }
@@ -2150,6 +2306,10 @@ private:
             if (!value_matches_type(*val, it->second.type_name)) return fail("value does not match declared type '" + it->second.type_name + "' for '" + name + "'");
             Value v = *val;
             v.type_name = it->second.type_name;
+            if (v.kind == ValueKind::Float &&
+                (v.type_name == "Float32" || v.type_name == "Double32")) {
+                v.float_val = static_cast<double>(static_cast<float>(v.float_val));
+            }
             if (v.kind == ValueKind::Array) v.array_element_type = it->second.array_element_type;
             it->second = std::move(v);
         }
