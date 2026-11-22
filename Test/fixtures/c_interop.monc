@@ -11,6 +11,7 @@
         int abs(int value);
         int atoi(char* text);
         int rand(void);
+        void srand(unsigned int seed);
     }
 }
 
@@ -20,13 +21,17 @@ fn main[] -> Int32 {
     let wave: Float64 = sin(0.0);
     let absolute: Int32 = abs(-17);
     let parsed: Int32 = atoi("123");
-    let random_value: Int32 = rand();
+    srand(123);
+    let random_first: Int32 = rand();
+    srand(123);
+    let random_second: Int32 = rand();
 
     print["sqrt=" + root];
     print["pow=" + power];
     print["sin=" + wave];
     print["abs=" + absolute];
     print["atoi=" + parsed];
-    print["rand=called"];
+    print["rand_first=" + random_first];
+    print["rand_second=" + random_second];
     return 0;
 }
