@@ -25,6 +25,8 @@ fn main[] -> Int32 {
     let random_first: Int32 = rand();
     srand(123);
     let random_second: Int32 = rand();
+    srand(456);
+    let random_different_seed: Int32 = rand();
 
     print["sqrt=" + root];
     print["pow=" + power];
@@ -33,5 +35,6 @@ fn main[] -> Int32 {
     print["atoi=" + parsed];
     print["rand_first=" + random_first];
     print["rand_second=" + random_second];
+    print["rand_different_seed=" + random_different_seed];
     return 0;
 }
