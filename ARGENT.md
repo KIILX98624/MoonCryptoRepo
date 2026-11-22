@@ -68,7 +68,7 @@ O CMake vincula BCrypt automaticamente no Windows.
 No Windows com g++ disponível:
 
 ```powershell
-g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp -o moon.exe
+g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp -o monc.exe
 .\moon.exe entry examples\hello
 .\moon.exe run examples\hello
 ```
