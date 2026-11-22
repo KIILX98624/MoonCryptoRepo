@@ -1282,21 +1282,35 @@ private:
 
         const bool float_signature = binding.return_type == "float" || binding.return_type == "double";
         const bool int_signature = binding.return_type == "int";
+        const bool string_pointer_signature =
+            is_stdlib && int_signature && args.size() == 1 &&
+            binding.parameter_types.size() == 1 &&
+            (binding.parameter_types[0] == "char*" || binding.parameter_types[0] == "const char*");
         if ((!float_signature && !int_signature) ||
             (is_math && !float_signature) || (is_stdlib && !int_signature)) {
             fail("C function '" + name + "' has an unsupported signature for header '" + binding.header + "'");
             return std::nullopt;
         }
-        for (const auto& type : binding.parameter_types) {
-            if (type != binding.return_type) {
-                fail("C function '" + name + "' currently requires parameters matching its return type");
-                return std::nullopt;
+        if (!string_pointer_signature) {
+            for (const auto& type : binding.parameter_types) {
+                if (type != binding.return_type) {
+                    fail("C function '" + name + "' currently requires parameters matching its return type");
+                    return std::nullopt;
+                }
             }
+        } else if (args[0].kind != ValueKind::String) {
+            fail("C function '" + name + "' expects a MonC String for its char* parameter");
+            return std::nullopt;
         }
 
         double float_values[2] = {0.0, 0.0};
         int int_values[2] = {0, 0};
         for (std::size_t i = 0; i < args.size(); ++i) {
+            if (string_pointer_signature) {
+                // The std::string storage remains alive for the duration of the C call;
+                // c_str() supplies the null-terminated buffer expected by C.
+                continue;
+            }
             if (float_signature) {
                 if (args[i].kind == ValueKind::Float) float_values[i] = args[i].float_val;
                 else if (args[i].kind == ValueKind::Integer) float_values[i] = static_cast<double>(args[i].int_val);
@@ -1341,6 +1355,9 @@ private:
             else if (args.size() == 2) { using Fn = float(__cdecl*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
             else { using Fn = float(__cdecl*)(); r = reinterpret_cast<Fn>(symbol)(); }
             float_result = r;
+        } else if (string_pointer_signature) {
+            using Fn = int(__cdecl*)(const char*);
+            int_result = reinterpret_cast<Fn>(symbol)(args[0].str_val.c_str());
         } else {
             if (args.size() == 1) { using Fn = int(__cdecl*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
             else if (args.size() == 2) { using Fn = int(__cdecl*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
@@ -1377,6 +1394,9 @@ private:
             else if (args.size() == 2) { using Fn = float(*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
             else { using Fn = float(*)(); r = reinterpret_cast<Fn>(symbol)(); }
             float_result = r;
+        } else if (string_pointer_signature) {
+            using Fn = int(*)(const char*);
+            int_result = reinterpret_cast<Fn>(symbol)(args[0].str_val.c_str());
         } else {
             if (args.size() == 1) { using Fn = int(*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
             else if (args.size() == 2) { using Fn = int(*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
