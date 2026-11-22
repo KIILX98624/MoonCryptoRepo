@@ -53,7 +53,7 @@ fn main[] -> Int32 {
 Teste o exemplo com:
 
 ```powershell
-.\monc.exe run Examples\Others\if_else.monc ```(Erro descoberto)```
+.\monc.exe run Examples\Others\if_else.monc 
 ```
 
 O resultado deve ser `if funcionou`. A implementação ainda é experimental e aceita apenas declarações `let` com valores inteiros e comparações simples.
