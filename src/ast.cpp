@@ -93,9 +93,28 @@ struct Parser {
                     parameter.type = "const ";
                     ++index;
                 }
+
                 if (!is(TokenKind::Identifier)) return fail("expected C parameter type");
-                parameter.type += current().text;
+                const std::string first_type_word = current().text;
+                parameter.type += first_type_word;
                 ++index;
+
+                // C type specifiers can contain multiple words, e.g. "unsigned int".
+                if ((first_type_word == "unsigned" || first_type_word == "signed") &&
+                    is(TokenKind::Identifier)) {
+                    parameter.type += " " + current().text;
+                    ++index;
+                } else if (first_type_word == "long" && is(TokenKind::Identifier, "long")) {
+                    parameter.type += " " + current().text;
+                    ++index;
+                    if (is(TokenKind::Identifier, "int")) {
+                        parameter.type += " " + current().text;
+                        ++index;
+                    }
+                } else if (first_type_word == "short" && is(TokenKind::Identifier, "int")) {
+                    parameter.type += " " + current().text;
+                    ++index;
+                }
 
                 // Preserve pointer declarators (char*, const char*, char**, ...).
                 while (take(TokenKind::Symbol, "*")) {
