@@ -1,8 +1,8 @@
 #external "stdlib.h"{
     playCodeC {
         int abs(int x);
-        //int rand(void); erro!
-        //int atoi(char* texto) erro!
+        int rand(void);
+        int atoi(char* texto);
     }
 }
 
@@ -10,12 +10,12 @@ fn main[] -> Int32 {
     // let x: Int32 = -51;
     // let y: Int32 = abs(x);
     // print["The absolute value of "+ x + " is "+ y];
-    // let z: Int32 = rand(); 
-    // print["The Random Number is: " + z + "!"];
+    let z: Int32 = rand(); 
+    print["The Random Number is: " + z + "!"];
 
-    let texto: Char[] = "123";
+    let texto: Char[] = "1223";
 
-    let num: Int32 = atoi(texto[]);
+    let num: Int32 = atoi(texto);
 
     print[num];
 
