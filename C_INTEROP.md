@@ -19,7 +19,7 @@ let resultado: Float64 = sqrt(25.0);
 print[resultado];
 ```
 
-O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. Nesta primeira etapa, `math.h` é mapeado para a biblioteca matemática nativa do sistema e chamadas C `float`/`double` com até dois argumentos são resolvidas dinamicamente.
+O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. A implementação mapeia `math.h` para a biblioteca matemática nativa e `stdlib.h` para a biblioteca C padrão do sistema. Chamadas `float`/`double` e, agora, `int` com até dois argumentos homogêneos são resolvidas dinamicamente.
 
 ## Tipos numéricos
 
@@ -52,4 +52,4 @@ Os aliases preservam compatibilidade de representação. O runtime já armazena 
 
 ## Limitações atuais
 
-Esta etapa suporta apenas o cabeçalho `math.h` e funções com retorno `float`/`double`, de zero a dois parâmetros do mesmo tipo. Ainda não aceita ponteiros, qualificadores (`const`), structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias.
+A etapa atual suporta `math.h` com retorno/parâmetros `float` ou `double`, e `stdlib.h` com retorno/parâmetros `int`, sempre com zero a dois parâmetros homogêneos. Ainda não aceita retorno `void`, ponteiros, qualificadores (`const`), structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias.
