@@ -1,0 +1,15 @@
+#external "stdlib.h"{
+    playCodeC {
+        void* malloc(size_t size);
+        void free(void* ptr);
+    }
+}
+
+fn main[] -> Int32 {
+    let memory = malloc(64);
+    free(memory);
+    free(NULL);
+    print["malloc/free/NULL funcionando!"];
+
+    return 0;
+}

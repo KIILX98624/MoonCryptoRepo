@@ -2,8 +2,7 @@
     playCodeC {
         void srand(unsigned int seed);
         int rand(void);
-        void* malloc(size_t size);
-        void free(void* ptr);
+        int atoi(const char* str);
     }
 }
 
@@ -16,11 +15,12 @@ fn main[] -> Int32 {
 
     srand(719);
     print[rand()];
+    
+    let code: Char[] = "11221";
 
-    let memory = malloc(64);
-    free(memory);
-    free(NULL);
-    print["malloc/free/NULL funcionando!"];
+    let NumCode: Int32 = atoi(code);
+
+    print[NumCode];
 
     return 0;
 }
