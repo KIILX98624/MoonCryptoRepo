@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "MoonCrypto",
-  "scopeName": "source.mncyt",
+  "scopeName": "source.monc",
   "patterns": [
     { "include": "#comments" },
     { "include": "#directives" },
@@ -17,49 +17,49 @@
   "repository": {
     "directives": {
       "patterns": [
-        { "name": "keyword.control.directive.mncyt", "match": "#[A-Za-z_][A-Za-z0-9_]*" }
+        { "name": "keyword.control.directive.monc", "match": "#[A-Za-z_][A-Za-z0-9_]*" }
       ]
     },
     "comments": {
       "patterns": [
-        { "name": "comment.line.double-slash.mncyt", "match": "//.*$" },
-        { "name": "comment.block.mncyt", "begin": "/\\*", "end": "\\*/" }
+        { "name": "comment.line.double-slash.monc", "match": "//.*$" },
+        { "name": "comment.block.monc", "begin": "/\\*", "end": "\\*/" }
       ]
     },
     "strings": {
-      "name": "string.quoted.double.mncyt",
+      "name": "string.quoted.double.monc",
       "begin": "\"",
       "end": "\"",
-      "patterns": [{ "name": "constant.character.escape.mncyt", "match": "\\\\." }]
+      "patterns": [{ "name": "constant.character.escape.monc", "match": "\\\\." }]
     },
     "characters": {
-      "name": "string.quoted.single.mncyt",
+      "name": "string.quoted.single.monc",
       "begin": "'",
       "end": "'",
-      "patterns": [{ "name": "constant.character.escape.mncyt", "match": "\\\\." }]
+      "patterns": [{ "name": "constant.character.escape.monc", "match": "\\\\." }]
     },
     "keywords": {
-      "name": "keyword.control.mncyt",
+      "name": "keyword.control.monc",
       "match": "\\b(if|else|for|while|match|return|break|continue|import|module|unsafe|async|await|as)\\b"
     },
     "types": {
-      "name": "storage.type.mncyt",
+      "name": "storage.type.monc",
       "match": "\\b(Bool|Int8|Int16|Int32|Int64|UInt8|UInt16|UInt32|UInt64|Float32|Float64|Char|String|String32|String64|Bytes|ByteArray|Option|Result|SecretKey|Digest|SealedData)\\b"
     },
     "constants": {
-      "name": "storage.modifier.mncyt",
+      "name": "storage.modifier.monc",
       "match": "\\b(fn|let|const|mut|struct|class|pub|private|extern)\\b"
     },
     "functions": {
       "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
-      "captures": { "1": { "name": "entity.name.function.mncyt" } }
+      "captures": { "1": { "name": "entity.name.function.monc" } }
     },
     "numbers": {
-      "name": "constant.numeric.mncyt",
+      "name": "constant.numeric.monc",
       "match": "\\b(0[xX][0-9A-Fa-f]+|[0-9]+(\\.[0-9]+)?)\\b"
     },
     "operators": {
-      "name": "keyword.operator.mncyt",
+      "name": "keyword.operator.monc",
       "match": "(->|==|!=|<=|>=|&&|\\|\\||[+*/%=&|!<>-])"
     }
   }
