@@ -195,3 +195,8 @@ monc ast arquivo.monc
 ```
 
 Por enquanto ela lista funções, parâmetros e tipos de retorno.
+
+
+## Mudança de extensão e comando (2026-11-21)
+
+A extensão oficial dos arquivos-fonte passou de `.mncyt` para `.monc`. A execução recomendada agora é `monc run caminho/para/main.monc`; para projetos, `monc run caminho/para/pasta` continua disponível e localiza `main.monc` ou um único arquivo `init*.monc`.
