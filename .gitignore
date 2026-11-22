@@ -1,6 +1,5 @@
 /build/
 /moon
-/moon.exe
 /monc.exe
 /Test/monc-smoke.exe
 *.obj
