@@ -79,12 +79,29 @@ struct Parser {
         ++index;
         if (!take(TokenKind::Symbol, "(")) return fail("expected '(' after C function name");
 
-        if (!is(TokenKind::Symbol, ")")) {
+        if (is(TokenKind::Identifier, "void") &&
+            index + 1 < tokens.size() &&
+            tokens[index + 1].kind == TokenKind::Symbol &&
+            tokens[index + 1].text == ")") {
+            // In C, a lone void means that the function takes no parameters.
+            ++index;
+            ++index;
+        } else if (!is(TokenKind::Symbol, ")")) {
             while (true) {
-                if (!is(TokenKind::Identifier)) return fail("expected C parameter type");
                 CParameterNode parameter;
-                parameter.type = current().text;
+                if (is(TokenKind::Identifier, "const")) {
+                    parameter.type = "const ";
+                    ++index;
+                }
+                if (!is(TokenKind::Identifier)) return fail("expected C parameter type");
+                parameter.type += current().text;
                 ++index;
+
+                // Preserve pointer declarators (char*, const char*, char**, ...).
+                while (take(TokenKind::Symbol, "*")) {
+                    parameter.type += "*";
+                }
+
                 if (!is(TokenKind::Identifier)) return fail("expected C parameter name");
                 parameter.name = current().text;
                 ++index;
