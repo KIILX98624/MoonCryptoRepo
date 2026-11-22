@@ -45,10 +45,11 @@ Os aliases preservam compatibilidade de representação. A checagem de tipos e a
 ## Estado da implementação
 
 1. **Lexer:** reconhece literais decimais e notação exponencial como tokens `float`.
-2. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
-3. **Interpretador:** ainda precisa armazenar valores float, avaliar operações aritméticas e validar `Float32`/ `Float64`/ aliases.
-4. **ABI/linker:** ainda precisa compilar ou vincular as bibliotecas nativas, resolver símbolos e converter argumentos/retornos com segurança.
-5. **Chamadas:** a sintaxe de chamadas C com parênteses será habilitada para símbolos declarados em `playCodeC`; as chamadas normais da MonC continuam usando colchetes.
+2. **Runtime Float:** armazena valores binary32/binary64, aplica os aliases e executa `+`, `-`, `*`, `/` e `%` em expressões de ponto flutuante.
+3. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
+4. **Interpretador:** chamadas e conversões adicionais ainda precisam ser concluídas.
+5. **ABI/linker:** ainda precisa compilar ou vincular as bibliotecas nativas, resolver símbolos e converter argumentos/retornos com segurança.
+6. **Chamadas:** a sintaxe de chamadas C com parênteses será habilitada para símbolos declarados em `playCodeC`; as chamadas normais da MonC continuam usando colchetes.
 
 ## Limitações atuais
 
