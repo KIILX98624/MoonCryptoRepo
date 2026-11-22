@@ -19,7 +19,6 @@ Com um compilador C++20 disponível:
 ```sh
 g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o monc
 ./monc run caminho/para/main.monc
-./monc run caminho/para/main.monc
 ```
 
 No Windows, use `monc.exe run caminho\\para\\main.monc`.
@@ -29,7 +28,7 @@ No Windows, use `monc.exe run caminho\\para\\main.monc`.
 Use o nome real do arquivo, sem escrever os símbolos `<` e `>`:
 
 ```powershell
-monc caminho\para\programa.monc ```(erro Descoberto!!!)```
+monc run caminho\para\programa.monc ```(erro Descoberto!!!)```
 ```
 
 O binário deve estar em `C:\Program Files\MoonCrypto\monc.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `monc` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
