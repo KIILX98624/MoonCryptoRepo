@@ -19,7 +19,7 @@ let resultado: Float64 = sqrt(25.0);
 print[resultado];
 ```
 
-O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. A implementação mapeia `math.h` para a biblioteca matemática nativa e `stdlib.h` para a biblioteca C padrão do sistema. Chamadas `float`/`double` e, agora, `int` com até dois argumentos homogêneos são resolvidas dinamicamente.
+O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. A implementação mapeia `math.h` para a biblioteca matemática nativa e `stdlib.h` para a biblioteca C padrão do sistema. Chamadas `float`/`double` e `int` são resolvidas dinamicamente. A interoperabilidade inicial também aceita listas vazias declaradas como `void`, ponteiros para `char` em parâmetros e conversão de `String` MonC para `const char*` ao chamar `atoi`.
 
 ## Tipos numéricos
 
@@ -48,8 +48,9 @@ Os aliases preservam compatibilidade de representação. O runtime já armazena 
 2. **Runtime Float:** armazena valores binary32/binary64, aplica os aliases e executa `+`, `-`, `*`, `/` e `%` em expressões de ponto flutuante. A suíte de smoke test inclui literais, aliases, operações e notação exponencial.
 3. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
 4. **Runtime C inicial:** chamadas com parênteses para protótipos `float`/`double` de `math.h`, com zero a dois parâmetros do mesmo tipo, são resolvidas por `LoadLibrary`/`GetProcAddress` no Windows ou `dlopen`/`dlsym` em sistemas POSIX.
-5. **Próximas melhorias da ABI:** suporte a `int`, `void`, parâmetros mistos, mais argumentos, bibliotecas definidas pelo usuário, ponteiros e validação mais abrangente da ABI.
+5. **Parser de protótipos C:** reconhece `void` como lista vazia (`rand(void)`), declaradores de ponteiro em parâmetros (`char*` e `const char*`) e mantém o tipo declarado no AST.
+6. **Runtime de strings C:** `stdlib.h` aceita `atoi(char*)` ou `atoi(const char*)` com um argumento `String` da MonC, passado como buffer temporário terminado em `\\0`.
 
 ## Limitações atuais
 
-A etapa atual suporta `math.h` com retorno/parâmetros `float` ou `double`, e `stdlib.h` com retorno/parâmetros `int`, sempre com zero a dois parâmetros homogêneos. Ainda não aceita retorno `void`, ponteiros, qualificadores (`const`), structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias.
+A etapa atual suporta `math.h` com retorno/parâmetros `float` ou `double`, e `stdlib.h` com retorno/parâmetros `int`, sempre com zero a dois parâmetros homogêneos. Ainda não aceita retorno `void`, ponteiros genéricos ou ponteiros para tipos diferentes de `char`, structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias. A conversão `String` para ponteiro C está limitada ao parâmetro textual de `atoi` nesta etapa.
