@@ -44,10 +44,11 @@ void print_usage() {
               << "Usage:\n"
               << "  moon entry [project-directory]\n"
               << "  moon run [project-directory]\n"
-              << "  mooncyt nome_do_arquivo.mncyt\n"
-              << "  mooncyt lex arquivo.mncyt\n"
-              << "  mooncyt ast arquivo.mncyt\n"
-              << "  moon --help\n";
+              << "  monc run caminho\\para\\main.monc\n"
+              << "  monc run caminho\\para\\projeto\\\n"
+              << "  monc lex arquivo.monc\n"
+              << "  monc ast arquivo.monc\n"
+              << "  monc --help\n";
 }
 
 
@@ -1005,8 +1006,8 @@ private:
         trim(path_str);
         if (path_str.empty()) return fail("empty path in #external");
 
-        // "json" é um módulo nativo do interpretador, não um arquivo .mncyt.
-        if (path_str == "json" || path_str == "json.mncyt") {
+        // "json" é um módulo nativo do interpretador, não um arquivo .monc.
+        if (path_str == "json" || path_str == "json.monc") {
             loaded_modules_.insert("@builtin:json");
             return true;
         }
@@ -1017,13 +1018,13 @@ private:
         std::vector<std::filesystem::path> search_paths;
         if (path_.has_parent_path()) {
             search_paths.push_back(path_.parent_path() / target);
-            if (target.extension() != ".mncyt") {
-                search_paths.push_back(path_.parent_path() / (target.string() + ".mncyt"));
+            if (target.extension() != ".monc") {
+                search_paths.push_back(path_.parent_path() / (target.string() + ".monc"));
             }
         }
         search_paths.push_back(target);
-        if (target.extension() != ".mncyt") {
-            search_paths.push_back(target.string() + ".mncyt");
+        if (target.extension() != ".monc") {
+            search_paths.push_back(target.string() + ".monc");
         }
 
         bool found = false;
@@ -2567,7 +2568,7 @@ int main(int argc, char** argv) {
 
     if (argc == 3 && std::string(argv[1]) == "lex") {
         std::ifstream input(argv[2], std::ios::binary);
-        if (!input) { std::cerr << "mooncyt: error: cannot read source file\n"; return 1; }
+        if (!input) { std::cerr << "monc: error: cannot read source file\n"; return 1; }
         std::ostringstream buffer; buffer << input.rdbuf();
         for (const auto& token : moon::lex_source(buffer.str())) {
             std::cout << token.line << ':' << token.column << ' ' << moon::token_kind_name(token.kind);
@@ -2579,7 +2580,7 @@ int main(int argc, char** argv) {
 
     if (argc == 3 && std::string(argv[1]) == "ast") {
         std::ifstream input(argv[2], std::ios::binary);
-        if (!input) { std::cerr << "mooncyt: error: cannot read source file\n"; return 1; }
+        if (!input) { std::cerr << "monc: error: cannot read source file\n"; return 1; }
         std::ostringstream buffer; buffer << input.rdbuf();
         const auto ast = moon::parse_ast(moon::lex_source(buffer.str()));
         if (!ast.ok()) {
@@ -2601,12 +2602,25 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    // Direct source-file mode: mooncyt program.mncyt
+    // Preferred mode: monc run path/to/main.monc
+    if (argc == 3 && std::string(argv[1]) == "run") {
+        const std::filesystem::path source_path = argv[2];
+        if (source_path.extension() == ".monc") {
+            if (!std::filesystem::is_regular_file(source_path)) {
+                std::cerr << "monc: error: source file not found: " << source_path.string() << '\n';
+                return 1;
+            }
+            const int result = execute_print_subset(source_path);
+            return result < 0 ? 1 : result;
+        }
+    }
+
+    // Short direct mode remains available: monc program.monc
     if (argc == 2) {
         const std::filesystem::path source_path = argv[1];
-        if (source_path.extension() == ".mncyt") {
+        if (source_path.extension() == ".monc") {
             if (!std::filesystem::is_regular_file(source_path)) {
-                std::cerr << "mooncyt: error: source file not found: " << source_path.string() << '\n';
+                std::cerr << "monc: error: source file not found: " << source_path.string() << '\n';
                 return 1;
             }
             const int result = execute_print_subset(source_path);
