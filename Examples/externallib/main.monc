@@ -1,0 +1,9 @@
+
+fn main[] -> Int32 {
+
+    let floatest: Float32 = 3.14159;
+
+    print["Float: " + floatest];
+
+    return 0;
+}
