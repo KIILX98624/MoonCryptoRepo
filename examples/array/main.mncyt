@@ -1,0 +1,20 @@
+fn main[] -> Int32 {
+    let numeros: Array<Int32> = Array[10, 20, 30];
+
+    array.push[numeros, 40];
+    print["Primeiro: " + numeros[0]];
+    print["Tamanho: " + array.length[numeros]];
+
+    array.set[numeros, 0, 100];
+    print["Atualizado: " + array.get[numeros, 0]];
+
+    array.remove[numeros, 1];
+    let ultimo: Int32 = array.pop[numeros];
+    print["Removido do final: " + ultimo];
+
+    print["Antes de limpar: " + array.length[numeros]];
+    array.clear[numeros];
+    print["Depois de limpar: " + array.length[numeros]];
+
+    return 0;
+}
