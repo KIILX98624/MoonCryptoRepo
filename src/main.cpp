@@ -42,8 +42,8 @@ void configure_console_encoding() {
 void print_usage() {
     std::cout << "MoonCrypto compiler prototype 0.1.0\n"
               << "Usage:\n"
-              << "  moon entry [project-directory]\n"
-              << "  moon run [project-directory]\n"
+              << "  monc entry [project-directory]\n"
+              << "  monc run [arquivo.monc ou pasta]\n"
               << "  monc run caminho\\para\\main.monc\n"
               << "  monc run caminho\\para\\projeto\\\n"
               << "  monc lex arquivo.monc\n"
@@ -2551,7 +2551,7 @@ private:
 int execute_print_subset(const std::filesystem::path& source_path) {
     std::ifstream input(source_path, std::ios::binary);
     if (!input) {
-        std::cerr << "moon: error: cannot read source file: " << source_path.string() << '\n';
+        std::cerr << "monc: error: cannot read source file: " << source_path.string() << '\n';
         return -1;
     }
     std::ostringstream buffer;
@@ -2636,7 +2636,7 @@ int main(int argc, char** argv) {
     const std::filesystem::path project = argc == 3 ? argv[2] : ".";
     const auto resolution = moon::resolve_entry(project);
     if (!resolution.ok()) {
-        std::cerr << "moon: error: " << resolution.error << '\n';
+        std::cerr << "monc: error: " << resolution.error << '\n';
         for (const auto& candidate : resolution.candidates) {
             std::cerr << "  - " << std::filesystem::relative(candidate, resolution.project_root).string() << '\n';
         }
