@@ -1268,119 +1268,124 @@ private:
         const auto found = c_functions_.find(name);
         if (found == c_functions_.end()) return std::nullopt;
         const auto& binding = found->second;
-        if (binding.header != "math.h") {
-            fail("C header '" + binding.header + "' has no native library mapping yet");
-            return std::nullopt;
-        }
-        if (binding.return_type != "double" && binding.return_type != "float") {
-            fail("C function '" + name + "' currently requires a float or double return type");
+
+        const bool is_math = binding.header == "math.h";
+        const bool is_stdlib = binding.header == "stdlib.h";
+        if (!is_math && !is_stdlib) {
+            fail("C header '" + binding.header + "' is not supported yet");
             return std::nullopt;
         }
         if (binding.parameter_types.size() != args.size() || args.size() > 2) {
-            fail("C function '" + name + "' has an unsupported argument count");
+            fail("C function '" + name + "' has an unsupported argument count (maximum: 2)");
+            return std::nullopt;
+        }
+
+        const bool float_signature = binding.return_type == "float" || binding.return_type == "double";
+        const bool int_signature = binding.return_type == "int";
+        if ((!float_signature && !int_signature) ||
+            (is_math && !float_signature) || (is_stdlib && !int_signature)) {
+            fail("C function '" + name + "' has an unsupported signature for header '" + binding.header + "'");
             return std::nullopt;
         }
         for (const auto& type : binding.parameter_types) {
             if (type != binding.return_type) {
-                fail("C function '" + name + "' currently requires matching float/double parameter types");
-                return std::nullopt;
-            }
-        }
-        double values[2] = {0.0, 0.0};
-        for (std::size_t i = 0; i < args.size(); ++i) {
-            if (args[i].kind == ValueKind::Float) values[i] = args[i].float_val;
-            else if (args[i].kind == ValueKind::Integer) values[i] = static_cast<double>(args[i].int_val);
-            else {
-                fail("C function '" + name + "' expects numeric arguments");
+                fail("C function '" + name + "' currently requires parameters matching its return type");
                 return std::nullopt;
             }
         }
 
-        double result = 0.0;
+        double float_values[2] = {0.0, 0.0};
+        int int_values[2] = {0, 0};
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            if (float_signature) {
+                if (args[i].kind == ValueKind::Float) float_values[i] = args[i].float_val;
+                else if (args[i].kind == ValueKind::Integer) float_values[i] = static_cast<double>(args[i].int_val);
+                else {
+                    fail("C function '" + name + "' expects numeric arguments");
+                    return std::nullopt;
+                }
+            } else {
+                if (args[i].kind != ValueKind::Integer ||
+                    args[i].int_val < std::numeric_limits<int>::min() ||
+                    args[i].int_val > std::numeric_limits<int>::max()) {
+                    fail("C function '" + name + "' expects Int32-compatible arguments");
+                    return std::nullopt;
+                }
+                int_values[i] = static_cast<int>(args[i].int_val);
+            }
+        }
+
+        double float_result = 0.0;
+        int int_result = 0;
 #ifdef _WIN32
-        HMODULE library = LoadLibraryA("ucrtbase.dll");
+        HMODULE library = LoadLibraryA(is_math ? "ucrtbase.dll" : "ucrtbase.dll");
         if (!library) library = LoadLibraryA("msvcrt.dll");
         if (!library) {
-            fail("could not load the Windows C runtime for math.h");
+            fail("could not load the Windows C runtime for header '" + binding.header + "'");
             return std::nullopt;
         }
         FARPROC symbol = GetProcAddress(library, name.c_str());
         if (!symbol) {
             FreeLibrary(library);
-            fail("C symbol '" + name + "' was not found in the Windows C runtime");
+            fail("C symbol '" + name + "' was not found in the Windows runtime");
             return std::nullopt;
         }
-        if (binding.return_type == "double") {
-            if (args.size() == 1) {
-                using Function = double(__cdecl*)(double);
-                result = reinterpret_cast<Function>(symbol)(values[0]);
-            } else if (args.size() == 2) {
-                using Function = double(__cdecl*)(double, double);
-                result = reinterpret_cast<Function>(symbol)(values[0], values[1]);
-            } else {
-                using Function = double(__cdecl*)();
-                result = reinterpret_cast<Function>(symbol)();
-            }
+        if (float_signature && binding.return_type == "double") {
+            if (args.size() == 1) { using Fn = double(__cdecl*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
+            else if (args.size() == 2) { using Fn = double(__cdecl*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
+            else { using Fn = double(__cdecl*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
+        } else if (float_signature) {
+            const float a = static_cast<float>(float_values[0]), b = static_cast<float>(float_values[1]);
+            float r = 0.0f;
+            if (args.size() == 1) { using Fn = float(__cdecl*)(float); r = reinterpret_cast<Fn>(symbol)(a); }
+            else if (args.size() == 2) { using Fn = float(__cdecl*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
+            else { using Fn = float(__cdecl*)(); r = reinterpret_cast<Fn>(symbol)(); }
+            float_result = r;
         } else {
-            const float first = static_cast<float>(values[0]);
-            const float second = static_cast<float>(values[1]);
-            float float_result = 0.0f;
-            if (args.size() == 1) {
-                using Function = float(__cdecl*)(float);
-                float_result = reinterpret_cast<Function>(symbol)(first);
-            } else if (args.size() == 2) {
-                using Function = float(__cdecl*)(float, float);
-                float_result = reinterpret_cast<Function>(symbol)(first, second);
-            } else {
-                using Function = float(__cdecl*)();
-                float_result = reinterpret_cast<Function>(symbol)();
-            }
-            result = float_result;
+            if (args.size() == 1) { using Fn = int(__cdecl*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
+            else if (args.size() == 2) { using Fn = int(__cdecl*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
+            else { using Fn = int(__cdecl*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
         FreeLibrary(library);
 #else
-        void* library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
-        if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+        void* library = nullptr;
+        if (is_math) {
+            library = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
+            if (!library) library = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+        } else {
+            library = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
+            if (!library) library = dlopen("libc.so", RTLD_NOW | RTLD_LOCAL);
+        }
         if (!library) {
-            fail("could not load libm for math.h");
+            fail("could not load native library for header '" + binding.header + "'");
             return std::nullopt;
         }
         void* symbol = dlsym(library, name.c_str());
         if (!symbol) {
             dlclose(library);
-            fail("C symbol '" + name + "' was not found in libm");
+            fail("C symbol '" + name + "' was not found in the native library");
             return std::nullopt;
         }
-        if (binding.return_type == "double") {
-            if (args.size() == 1) {
-                using Function = double(*)(double);
-                result = reinterpret_cast<Function>(symbol)(values[0]);
-            } else if (args.size() == 2) {
-                using Function = double(*)(double, double);
-                result = reinterpret_cast<Function>(symbol)(values[0], values[1]);
-            } else {
-                using Function = double(*)();
-                result = reinterpret_cast<Function>(symbol)();
-            }
+        if (float_signature && binding.return_type == "double") {
+            if (args.size() == 1) { using Fn = double(*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
+            else if (args.size() == 2) { using Fn = double(*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
+            else { using Fn = double(*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
+        } else if (float_signature) {
+            const float a = static_cast<float>(float_values[0]), b = static_cast<float>(float_values[1]);
+            float r = 0.0f;
+            if (args.size() == 1) { using Fn = float(*)(float); r = reinterpret_cast<Fn>(symbol)(a); }
+            else if (args.size() == 2) { using Fn = float(*)(float, float); r = reinterpret_cast<Fn>(symbol)(a, b); }
+            else { using Fn = float(*)(); r = reinterpret_cast<Fn>(symbol)(); }
+            float_result = r;
         } else {
-            const float first = static_cast<float>(values[0]);
-            const float second = static_cast<float>(values[1]);
-            float float_result = 0.0f;
-            if (args.size() == 1) {
-                using Function = float(*)(float);
-                float_result = reinterpret_cast<Function>(symbol)(first);
-            } else if (args.size() == 2) {
-                using Function = float(*)(float, float);
-                float_result = reinterpret_cast<Function>(symbol)(first, second);
-            } else {
-                using Function = float(*)();
-                float_result = reinterpret_cast<Function>(symbol)();
-            }
-            result = float_result;
+            if (args.size() == 1) { using Fn = int(*)(int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0]); }
+            else if (args.size() == 2) { using Fn = int(*)(int, int); int_result = reinterpret_cast<Fn>(symbol)(int_values[0], int_values[1]); }
+            else { using Fn = int(*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
         dlclose(library);
 #endif
-        return Value::make_float(result, binding.return_type == "float" ? "Float32" : "Float64");
+        if (int_signature) return Value::make_int(int_result, "Int32");
+        return Value::make_float(float_result, binding.return_type == "float" ? "Float32" : "Float64");
     }
 
     std::optional<Value> call_function(const std::string& name, const std::vector<Value>& args) {

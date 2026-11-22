@@ -6,13 +6,21 @@
     }
 }
 
+#external "stdlib.h" {
+    playCodeC {
+        int abs(int value);
+    }
+}
+
 fn main[] -> Int32 {
     let root: Float64 = sqrt(25.0);
     let power: Float64 = pow(2.0, 5.0);
     let wave: Float64 = sin(0.0);
+    let absolute: Int32 = abs(-17);
 
     print["sqrt=" + root];
     print["pow=" + power];
     print["sin=" + wave];
+    print["abs=" + absolute];
     return 0;
 }
