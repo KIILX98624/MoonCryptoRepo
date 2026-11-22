@@ -9,6 +9,8 @@
 #external "stdlib.h" {
     playCodeC {
         int abs(int value);
+        int atoi(char* text);
+        int rand(void);
     }
 }
 
@@ -17,10 +19,14 @@ fn main[] -> Int32 {
     let power: Float64 = pow(2.0, 5.0);
     let wave: Float64 = sin(0.0);
     let absolute: Int32 = abs(-17);
+    let parsed: Int32 = atoi("123");
+    let random_value: Int32 = rand();
 
     print["sqrt=" + root];
     print["pow=" + power];
     print["sin=" + wave];
     print["abs=" + absolute];
+    print["atoi=" + parsed];
+    print["rand=called"];
     return 0;
 }
