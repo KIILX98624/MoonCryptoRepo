@@ -1619,6 +1619,7 @@ private:
             int paren_depth = 0;
             int bracket_depth = 0;
             bool in_double = false, in_single = false, escaped = false;
+            std::size_t candidate = std::string::npos;
             for (std::size_t i = 0; i < text.size(); ++i) {
                 const char c = text[i];
                 if (escaped) { escaped = false; continue; }
@@ -1635,9 +1636,9 @@ private:
                 const char previous = text[i - 1];
                 if (previous == '+' || previous == '-' || previous == '*' || previous == '/' || previous == '%' ||
                     previous == 'e' || previous == 'E') continue;
-                return i;
+                candidate = i;
             }
-            return std::string::npos;
+            return candidate;
         };
 
         std::size_t at = find_operator("+-");
