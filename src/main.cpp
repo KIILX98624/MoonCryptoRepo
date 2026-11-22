@@ -3,6 +3,7 @@
 #include "ast.hpp"
 
 #include <filesystem>
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstring>
@@ -1561,7 +1562,7 @@ private:
         return integer_operand(text);
     }
 
-    std::optional<double> floating_operand(std::string text) const {
+    std::optional<double> floating_operand(std::string text) {
         trim(text);
         if (text.empty()) return std::nullopt;
         try {
@@ -1599,7 +1600,7 @@ private:
         return false;
     }
 
-    std::optional<double> evaluate_float_expression(std::string text) const {
+    std::optional<double> evaluate_float_expression(std::string text) {
         trim(text);
         if (text.empty()) return std::nullopt;
 
