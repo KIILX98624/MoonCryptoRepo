@@ -1,8 +1,8 @@
-# Instruções do projeto MoonCrypto
+# Instruções do projeto MonC
 
 ## Contexto
 
-MoonCrypto é uma linguagem de programação com arquivos-fonte `.monc`, inspirada em C++ e com foco em segurança, criptografia, portabilidade e interoperabilidade com C/C++.
+MonC é uma linguagem de programação com arquivos-fonte `.monc`, inspirada em C++ e com foco em segurança, criptografia, portabilidade e interoperabilidade com C/C++.
 
 O projeto ainda está em fase inicial. Não trate o protótipo atual como uma implementação completa da linguagem.
 
@@ -28,7 +28,7 @@ O executável `moon` é um protótipo em C++20. O comando global é usado com o 
 monc examples\hello\main.monc
 ```
 
-O binário fica em `C:\Program Files\MoonCrypto\monc.exe`.
+O binário fica em `C:\Program Files\MonC\monc.exe`.
 
 O console do Windows deve ser configurado para UTF-8 antes da saída de texto, para preservar acentos e outros caracteres Unicode.
 
@@ -39,6 +39,10 @@ Atualmente ele:
 - Reporta erro quando não há candidato ou quando há mais de um.
 - Executa o comando `monc run` com suporte a funções (`fn`), parâmetros, retorno de valores, chamada de funções como instruções ou em expressões, importação de módulos com `#external`, `print[...]`, inteiros (`Int32`/`Int64`), strings (`String32`/`String64`/`String`), caracteres (`Char`), reatribuições, condicionais `if`/`else`, laços `for` e `while` com `break` e `continue`.
 - Ainda não possui lexer, parser, verificador de tipos, ownership checker ou geração de código nativo.
+
+### Interoperabilidade C já disponível
+
+O runtime reconhece `math.h` e `stdlib.h` com assinaturas limitadas. Já estão disponíveis: `sqrt`, `pow`, `sin`, `abs`, `atoi`, `rand`, `srand`, `malloc`, `free` e `NULL`. `atof`, `atol` e `atoll` ainda não foram implementadas. Os detalhes e limites estão em `C_INTEROP.md`.
 
 ## Estrutura principal
 
@@ -76,7 +80,7 @@ g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp -o mo
 O comando `run` deve imprimir:
 
 ```text
-Hello, MoonCrypto!
+Hello, MonC!
 ```
 
 Também existe configuração inicial em `CMakeLists.txt`.
