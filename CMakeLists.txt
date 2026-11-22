@@ -31,3 +31,12 @@ else()
         message(WARNING "OpenSSL não encontrado: crypto.sha256 ficará indisponível neste alvo")
     endif()
 endif()
+
+enable_testing()
+add_test(
+    NAME float_runtime
+    COMMAND ${CMAKE_COMMAND}
+        -DMONC=$<TARGET_FILE:monc>
+        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Test/fixtures/float.monc
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Test/check_float.cmake
+)
