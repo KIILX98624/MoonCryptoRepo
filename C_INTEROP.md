@@ -19,7 +19,7 @@ let resultado: Float64 = sqrt(25.0);
 print[resultado];
 ```
 
-O parser AST nesta etapa reconhece o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. As declarações são armazenadas em `ExternalNode::c_functions` e ainda não são vinculadas nem executadas.
+O parser AST e o runtime reconhecem o cabeçalho, o bloco `playCodeC`, os nomes das funções, tipos de retorno e parâmetros. Nesta primeira etapa, `math.h` é mapeado para a biblioteca matemática nativa do sistema e chamadas C `float`/`double` com até dois argumentos são resolvidas dinamicamente.
 
 ## Tipos numéricos
 
@@ -47,10 +47,9 @@ Os aliases preservam compatibilidade de representação. O runtime já armazena 
 1. **Lexer:** reconhece literais decimais e notação exponencial como tokens `float`.
 2. **Runtime Float:** armazena valores binary32/binary64, aplica os aliases e executa `+`, `-`, `*`, `/` e `%` em expressões de ponto flutuante. A suíte de smoke test inclui literais, aliases, operações e notação exponencial.
 3. **AST:** reconhece `#external "header" { playCodeC { ... } }` e registra protótipos C simples.
-4. **Interpretador:** chamadas e conversões adicionais ainda precisam ser concluídas.
-5. **ABI/linker:** ainda precisa compilar ou vincular as bibliotecas nativas, resolver símbolos e converter argumentos/retornos com segurança.
-6. **Chamadas:** a sintaxe de chamadas C com parênteses será habilitada para símbolos declarados em `playCodeC`; as chamadas normais da MonC continuam usando colchetes.
+4. **Runtime C inicial:** chamadas com parênteses para protótipos `float`/`double` de `math.h`, com zero a dois parâmetros do mesmo tipo, são resolvidas por `LoadLibrary`/`GetProcAddress` no Windows ou `dlopen`/`dlsym` em sistemas POSIX.
+5. **Próximas melhorias da ABI:** suporte a `int`, `void`, parâmetros mistos, mais argumentos, bibliotecas definidas pelo usuário, ponteiros e validação mais abrangente da ABI.
 
 ## Limitações atuais
 
-O parser desta primeira etapa aceita protótipos simples com tipos e nomes de parâmetros. Não aceita ainda ponteiros, qualificadores (`const`), structs C, variádicas, macros, typedefs, callbacks, arrays C ou declarações complexas. A declaração de um protótipo não implica que o símbolo esteja disponível na linkedição.
+Esta etapa suporta apenas o cabeçalho `math.h` e funções com retorno `float`/`double`, de zero a dois parâmetros do mesmo tipo. Ainda não aceita ponteiros, qualificadores (`const`), structs C, funções variádicas, macros, typedefs, callbacks, arrays C, parâmetros mistos ou bibliotecas arbitrárias.
