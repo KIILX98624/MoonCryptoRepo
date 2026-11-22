@@ -1,4 +1,4 @@
-# MoonCrypto — Especificação técnica inicial v0.1
+# MoonCrypto — Especificação técnica inicial v1.0.0
 
 > A especificação atual de sintaxe, tipos, EBNF, imports, overflow, bytes, erros e ownership está em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
@@ -6,11 +6,11 @@
 
 **Status:** proposta para revisão. A execução nativa, ownership verificado pelo compilador, suporte a Git e prioridades de portabilidade e interoperabilidade com C++ estão definidos como direção. O tratamento de erros continua em aberto.
 
-> **Estado do repositório:** protótipo nativo em C++20. `moon entry` resolve o arquivo de entrada e `moon run` interpreta o subconjunto validado da linguagem `.mncyt`; o comando `mooncyt arquivo.mncyt` é a interface direta recomendada.
+> **Estado do repositório:** protótipo nativo em C++20. `mooncyt` resolve o arquivo de entrada e `mooncyt` interpreta o subconjunto validado da linguagem `.mncyt`; o comando `mooncyt main.mncyt` é a interface direta recomendada.
 
 ### VS Code
 
-O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-0.1.0.vsix` pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-0.1.0.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.mncyt`. É suporte de edição; não oferece ainda diagnósticos do compilador.
+O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-1.5.4.vsix` (mais atual) pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-1.5.4.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.mncyt`. É suporte de edição; não oferece ainda diagnósticos do compilador.
 
 ### Compilar o protótipo
 
@@ -18,8 +18,8 @@ Com um compilador C++20 disponível:
 
 ```sh
 g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o moon
-./moon entry examples/hello
-./moon run examples/hello
+./mooncyt examples/hello
+./mooncyt examples/hello
 ```
 
 No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.mncyt`; o segundo exibe `Hello, MoonCrypto!`.
@@ -29,10 +29,10 @@ No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.mnc
 Use o nome real do arquivo, sem escrever os símbolos `<` e `>`:
 
 ```powershell
-mooncyt caminho\para\programa.mncyt
+mooncyt caminho\para\programa.mncyt ```(erro Descoberto!!!)```
 ```
 
-O binário está em `C:\Program Files\MoonCrypto\mooncyt.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `mooncyt` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
+O binário deve estar em `C:\Program Files\MoonCrypto\mooncyt.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `mooncyt` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
 
 O executável configura a saída do console do Windows como UTF-8, permitindo imprimir caracteres como `é` corretamente.
 
@@ -54,7 +54,7 @@ fn main[] -> Int32 {
 Teste o exemplo com:
 
 ```powershell
-.\moon.exe run examples\if_else
+.\moon.exe run examples\if_else ```(Erro descoberto)```
 ```
 
 O resultado deve ser `if funcionou`. A implementação ainda é experimental e aceita apenas declarações `let` com valores inteiros e comparações simples.
@@ -107,12 +107,12 @@ O interpretador executa o formato `for` inteiro mostrado acima e laços `while [
 Teste o exemplo de `while` com:
 
 ```powershell
-.\moon.exe run examples\while
+.\moon.exe run examples\while ```(erro descoberto!!)```
 ```
 
 ### Módulos e Funções com `#external`
 
-O interpretador permite criar funções reutilizáveis (`fn nome[params] -> Retorno { ... }`) e dividir o código em múltiplos arquivos `.mncyt` usando a diretiva `#external`:
+O interpretador permite criar funções reutilizáveis (`fn nome[params] -> Retorno { ... }`) e dividir o código em múltiplos arquivos `.mncyt` usando a diretiva `#external` ou `use`:
 
 ```cpp
 // matematica.mncyt
@@ -139,7 +139,7 @@ fn main[] -> Int32 {
 Teste o exemplo de módulos com:
 
 ```powershell
-mooncyt examples\modules\main.mncyt
+mooncyt examples\modules\main.mncyt ```(Erro encontrado!!!)```
 ```
 
 
@@ -256,7 +256,7 @@ O compilador, provisoriamente chamado `moon`, traduz arquivos `.mncyt` para cód
 
 O artefato será um executável nativo do sistema de destino. O compilador deve permitir builds para x64 e ARM64, inicialmente nos sistemas operacionais escolhidos para a primeira versão.
 
-Exemplo de comandos planejados:
+Exemplo de comandos ***planejados***:
 
 ```text
 moon build
@@ -414,9 +414,8 @@ A busca não será recursiva nesta versão. A sensibilidade a maiúsculas e min�
 
 ## 9. Decisões abertas para a próxima revisão
 
-1. Quais sistemas operacionais devem fazer parte da primeira versão para x64 e ARM64?
-2. A busca por `init` deve incluir nomes como `initialize.mncyt` e `InitCrypto.mncyt`?
-3. Qual regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo?
-4. Para erros, você prefere investigar primeiro `Result`, exceções ou um modelo combinado?
-5. Quer definir agora um manifesto mínimo, incluindo formato e campo opcional `entry`?
-6. Há uma biblioteca criptográfica consolidada que você prefira avaliar para a implementação oficial?
+1. esses sistemas operacionais devem fazer parte da primeira versão para x64: Windows 10/11.
+2. A busca por `main` deve incluir nomes em qualquer arquivo que termine com `.mncyt`.
+3. regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo, por exemplo: `Main.mncyt` não ira ser igual a `main.mncyt`.
+4. Para erros iremos introduzir primeiro `Result`, exceções ou algum outro modelo determinado depois.
+6. Há uma biblioteca criptográfica consolidada que iremos adicionar posteriormente para a implementação oficial.
