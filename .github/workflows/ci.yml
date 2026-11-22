@@ -24,7 +24,7 @@ jobs:
         run: cmake -S . -B build-ci
 
       - name: Build
-        run: cmake --build-ci build-ci --config Release
+        run: cmake --build build-ci --config Release
 
       - name: Test
         run: ctest --test-dir build-ci -C Release --output-on-failure
