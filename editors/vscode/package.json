@@ -1,7 +1,7 @@
 {
   "name": "mooncrypto-language",
   "displayName": "MoonCrypto Language Support",
-  "description": "Syntax highlighting and snippets for MoonCrypto (.mncyt).",
+  "description": "Syntax highlighting and snippets for MoonCrypto (.monc).",
   "version": "1.5.4",
   "publisher": "mooncrypto-project",
   "icon": "mooncrypto-icon.png",
@@ -10,13 +10,13 @@
   "contributes": {
     "languages": [{
       "id": "mooncrypto",
-      "aliases": ["MoonCrypto", "mooncrypto", "mncyt"],
-      "extensions": [".mncyt"],
+      "aliases": ["MoonCrypto", "mooncrypto", "monc"],
+      "extensions": [".monc"],
       "configuration": "./language-configuration.json"
     }],
     "grammars": [{
       "language": "mooncrypto",
-      "scopeName": "source.mncyt",
+      "scopeName": "source.monc",
       "path": "./syntaxes/mooncrypto.tmLanguage.json"
     }],
     "snippets": [{
