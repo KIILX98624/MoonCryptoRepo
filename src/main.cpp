@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -331,7 +332,8 @@ enum class ValueKind {
     Bytes,
     Array,
     Json,
-    Result
+    Result,
+    Pointer
 };
 
 struct Value {
@@ -348,6 +350,7 @@ struct Value {
     std::shared_ptr<JsonNode> json_val;
     bool result_ok = false;
     std::shared_ptr<Value> result_value;
+    void* pointer_val = nullptr;
 
     static Value make_int(long long v, std::string type = "Int32") {
         Value val;
@@ -415,6 +418,14 @@ struct Value {
         return val;
     }
 
+    static Value make_pointer(void* pointer) {
+        Value val;
+        val.kind = ValueKind::Pointer;
+        val.type_name = "Pointer";
+        val.pointer_val = pointer;
+        return val;
+    }
+
     static Value make_result_ok(Value value) {
         Value result;
         result.kind = ValueKind::Result;
@@ -463,6 +474,12 @@ struct Value {
             case ValueKind::Json: return json_serialize(json_val);
             case ValueKind::Result:
                 return result_value ? result_value->to_string() : "";
+            case ValueKind::Pointer: {
+                if (!pointer_val) return "NULL";
+                std::ostringstream out;
+                out << pointer_val;
+                return out.str();
+            }
         }
         return "";
     }
@@ -545,6 +562,7 @@ bool value_matches_type(const Value& value, const std::string& type_name) {
         }
         return true;
     }
+    if (type_name == "Pointer" || type_name == "void*" || type_name == "char*" || type_name == "const char*") return value.kind == ValueKind::Pointer;
     if (type_name == "Json" || type_name == "JsonValue") return value.kind == ValueKind::Json;
     if (type_name == "Result" || type_name.rfind("Result<", 0) == 0) return value.kind == ValueKind::Result;
     if (type_name.rfind("Int", 0) == 0 || type_name.rfind("UInt", 0) == 0) {
@@ -1283,6 +1301,10 @@ private:
         const bool float_signature = binding.return_type == "float" || binding.return_type == "double";
         const bool int_signature = binding.return_type == "int";
         const bool void_signature = binding.return_type == "void";
+        const bool malloc_signature = is_stdlib && binding.return_type == "void*" && name == "malloc" &&
+            args.size() == 1 && binding.parameter_types.size() == 1 && binding.parameter_types[0] == "size_t";
+        const bool free_signature = is_stdlib && void_signature && name == "free" &&
+            args.size() == 1 && binding.parameter_types.size() == 1 && binding.parameter_types[0] == "void*";
         const bool srand_signature =
             is_stdlib && void_signature && args.size() == 1 &&
             binding.parameter_types.size() == 1 &&
@@ -1291,13 +1313,17 @@ private:
             is_stdlib && int_signature && args.size() == 1 &&
             binding.parameter_types.size() == 1 &&
             (binding.parameter_types[0] == "char*" || binding.parameter_types[0] == "const char*");
-        if ((!float_signature && !int_signature && !srand_signature) ||
+        if ((!float_signature && !int_signature && !srand_signature && !malloc_signature && !free_signature) ||
             (is_math && !float_signature) ||
-            (is_stdlib && !int_signature && !srand_signature)) {
+            (is_stdlib && !int_signature && !srand_signature && !malloc_signature && !free_signature)) {
             fail("C function '" + name + "' has an unsupported signature for header '" + binding.header + "'");
             return std::nullopt;
         }
-        if (!string_pointer_signature && !srand_signature) {
+        if (free_signature && args[0].kind != ValueKind::Pointer) {
+            fail("free expects a Pointer or NULL");
+            return std::nullopt;
+        }
+        if (!string_pointer_signature && !srand_signature && !malloc_signature && !free_signature) {
             for (const auto& type : binding.parameter_types) {
                 if (type != binding.return_type) {
                     fail("C function '" + name + "' currently requires parameters matching its return type");
@@ -1312,7 +1338,19 @@ private:
         double float_values[2] = {0.0, 0.0};
         int int_values[2] = {0, 0};
         unsigned int unsigned_int_value = 0;
+        std::size_t allocation_size = 0;
         for (std::size_t i = 0; i < args.size(); ++i) {
+            if (malloc_signature) {
+                if (args[i].kind != ValueKind::Integer || args[i].int_val < 0 ||
+                    static_cast<unsigned long long>(args[i].int_val) >
+                        static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max())) {
+                    fail("malloc expects a non-negative size_t-compatible integer");
+                    return std::nullopt;
+                }
+                allocation_size = static_cast<std::size_t>(args[i].int_val);
+                continue;
+            }
+            if (free_signature) continue;
             if (string_pointer_signature) {
                 // The std::string storage remains alive for the duration of the C call;
                 // c_str() supplies the null-terminated buffer expected by C.
@@ -1348,6 +1386,7 @@ private:
 
         double float_result = 0.0;
         int int_result = 0;
+        void* pointer_result = nullptr;
 #ifdef _WIN32
         // Keep the CRT modules loaded for the interpreter lifetime. Unloading
         // a dynamically loaded CRT after each call can reset its internal state,
@@ -1368,7 +1407,13 @@ private:
             fail("C symbol '" + name + "' was not found in the Windows runtime");
             return std::nullopt;
         }
-        if (float_signature && binding.return_type == "double") {
+        if (malloc_signature) {
+            using Fn = void*(__cdecl*)(std::size_t);
+            pointer_result = reinterpret_cast<Fn>(symbol)(allocation_size);
+        } else if (free_signature) {
+            using Fn = void(__cdecl*)(void*);
+            reinterpret_cast<Fn>(symbol)(args[0].pointer_val);
+        } else if (float_signature && binding.return_type == "double") {
             if (args.size() == 1) { using Fn = double(__cdecl*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
             else if (args.size() == 2) { using Fn = double(__cdecl*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
             else { using Fn = double(__cdecl*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
@@ -1415,7 +1460,13 @@ private:
             fail("C symbol '" + name + "' was not found in the native library");
             return std::nullopt;
         }
-        if (float_signature && binding.return_type == "double") {
+        if (malloc_signature) {
+            using Fn = void*(*)(std::size_t);
+            pointer_result = reinterpret_cast<Fn>(symbol)(allocation_size);
+        } else if (free_signature) {
+            using Fn = void(*)(void*);
+            reinterpret_cast<Fn>(symbol)(args[0].pointer_val);
+        } else if (float_signature && binding.return_type == "double") {
             if (args.size() == 1) { using Fn = double(*)(double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0]); }
             else if (args.size() == 2) { using Fn = double(*)(double, double); float_result = reinterpret_cast<Fn>(symbol)(float_values[0], float_values[1]); }
             else { using Fn = double(*)(); float_result = reinterpret_cast<Fn>(symbol)(); }
@@ -1438,7 +1489,14 @@ private:
             else { using Fn = int(*)(); int_result = reinterpret_cast<Fn>(symbol)(); }
         }
 #endif
-        if (srand_signature) return Value::make_int(0, "Void");
+        if (malloc_signature) {
+            if (allocation_size != 0 && pointer_result == nullptr) {
+                fail("malloc failed to allocate the requested memory");
+                return std::nullopt;
+            }
+            return Value::make_pointer(pointer_result);
+        }
+        if (free_signature || srand_signature) return Value::make_int(0, "Void");
         if (int_signature) return Value::make_int(int_result, "Int32");
         return Value::make_float(float_result, binding.return_type == "float" ? "Float32" : "Float64");
     }
@@ -2002,6 +2060,7 @@ private:
             return Value::make_char(*unesc_c);
         }
 
+        if (text == "NULL") return Value::make_pointer(nullptr);
         if (text == "true") return Value::make_bool(true);
         if (text == "false") return Value::make_bool(false);
 

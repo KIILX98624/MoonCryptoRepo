@@ -73,6 +73,8 @@ struct Parser {
         CFunctionNode function;
         function.return_type = current().text;
         ++index;
+        // Preserve pointer return declarators such as void* malloc(...).
+        while (take(TokenKind::Symbol, "*")) function.return_type += "*";
 
         if (!is(TokenKind::Identifier)) return fail("expected C function name");
         function.name = current().text;
