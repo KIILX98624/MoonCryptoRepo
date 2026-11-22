@@ -6,11 +6,11 @@
 
 **Status:** proposta para revisão. A execução nativa, ownership verificado pelo compilador, suporte a Git e prioridades de portabilidade e interoperabilidade com C++ estão definidos como direção. O tratamento de erros continua em aberto.
 
-> **Estado do repositório:** protótipo nativo em C++20. `mooncyt` resolve o arquivo de entrada e `mooncyt` interpreta o subconjunto validado da linguagem `.mncyt`; o comando `mooncyt main.mncyt` é a interface direta recomendada.
+> **Estado do repositório:** protótipo nativo em C++20. `monc` resolve o arquivo de entrada e `monc` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc main.monc` é a interface direta recomendada.
 
 ### VS Code
 
-O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-1.5.4.vsix` (mais atual) pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-1.5.4.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.mncyt`. É suporte de edição; não oferece ainda diagnósticos do compilador.
+O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-1.5.4.vsix` (mais atual) pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-1.5.4.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.monc`. É suporte de edição; não oferece ainda diagnósticos do compilador.
 
 ### Compilar o protótipo
 
@@ -18,21 +18,21 @@ Com um compilador C++20 disponível:
 
 ```sh
 g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o moon
-./mooncyt examples/hello
-./mooncyt examples/hello
+./monc examples/hello
+./monc examples/hello
 ```
 
-No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.mncyt`; o segundo exibe `Hello, MoonCrypto!`.
+No Windows, troque `./moon` por `moon.exe`. O primeiro comando retorna `main.monc`; o segundo exibe `Hello, MoonCrypto!`.
 
-### Comando global `mooncyt`
+### Comando global `monc`
 
 Use o nome real do arquivo, sem escrever os símbolos `<` e `>`:
 
 ```powershell
-mooncyt caminho\para\programa.mncyt ```(erro Descoberto!!!)```
+monc caminho\para\programa.monc ```(erro Descoberto!!!)```
 ```
 
-O binário deve estar em `C:\Program Files\MoonCrypto\mooncyt.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `mooncyt` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
+O binário deve estar em `C:\Program Files\MoonCrypto\monc.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `monc` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
 
 O executável configura a saída do console do Windows como UTF-8, permitindo imprimir caracteres como `é` corretamente.
 
@@ -112,10 +112,10 @@ Teste o exemplo de `while` com:
 
 ### Módulos e Funções com `#external`
 
-O interpretador permite criar funções reutilizáveis (`fn nome[params] -> Retorno { ... }`) e dividir o código em múltiplos arquivos `.mncyt` usando a diretiva `#external` ou `use`:
+O interpretador permite criar funções reutilizáveis (`fn nome[params] -> Retorno { ... }`) e dividir o código em múltiplos arquivos `.monc` usando a diretiva `#external` ou `use`:
 
 ```cpp
-// matematica.mncyt
+// matematica.monc
 fn somar[a: Int32, b: Int32] -> Int32 {
     return a + b;
 }
@@ -125,7 +125,7 @@ fn saudar[nome: String32] -> Int32 {
     return 0;
 }
 
-// main.mncyt
+// main.monc
 #external "matematica"
 
 fn main[] -> Int32 {
@@ -139,15 +139,15 @@ fn main[] -> Int32 {
 Teste o exemplo de módulos com:
 
 ```powershell
-mooncyt examples\modules\main.mncyt ```(Erro encontrado!!!)```
+monc examples\modules\main.monc ```(Erro encontrado!!!)```
 ```
 
 
 ### Módulo JSON nativo
 
-O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.mncyt` separado nem dependência externa.
+O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.monc` separado nem dependência externa.
 
-```mncyt
+```monc
 #external "json"
 
 fn main[] -> Int32 {
@@ -191,7 +191,7 @@ O parser aceita os tipos JSON padrão, escapes de string, escapes Unicode `\\uXX
 
 MoonCrypto terá um módulo criptográfico oficial. A sintaxe proposta é:
 
-```mncyt
+```monc
 use crypto
 
 fn main[] -> Int32 {
@@ -204,7 +204,7 @@ fn main[] -> Int32 {
 
 Para cifragem, a API deve usar criptografia autenticada:
 
-```mncyt
+```monc
 use crypto
 
 fn main[] -> Int32 {
@@ -225,14 +225,14 @@ Autenticação de mensagens usa `crypto.hmac_sha256[dados, chave]`, retornando u
 
 O interpretador também possui um modelo inicial de erro explícito com `Result`:
 
-```mncyt
+```monc
 let resposta: Result = ok[42];
 if (resposta.is_ok[]) {
     print[resposta.unwrap[]];
 }
 ```
 
-Comportamento implementado: prioriza `main.mncyt` na raiz; caso não exista, procura arquivos `.mncyt` com `init` no nome na raiz e em `src/`. A busca não é recursiva. Nenhum candidato gera erro, e múltiplos candidatos são listados como ambiguidade.
+Comportamento implementado: prioriza `main.monc` na raiz; caso não exista, procura arquivos `.monc` com `init` no nome na raiz e em `src/`. A busca não é recursiva. Nenhum candidato gera erro, e múltiplos candidatos são listados como ambiguidade.
 
 ## 1. Objetivos
 
@@ -248,10 +248,10 @@ Prioridades iniciais:
 
 ## 2. Execução e compilação
 
-O compilador, provisoriamente chamado `moon`, traduz arquivos `.mncyt` para código nativo. A proposta é usar LLVM como representação intermediária e deixar a vinculação final a cargo da toolchain da plataforma.
+O compilador, provisoriamente chamado `moon`, traduz arquivos `.monc` para código nativo. A proposta é usar LLVM como representação intermediária e deixar a vinculação final a cargo da toolchain da plataforma.
 
 ```text
-.mncyt → análise e verificação → LLVM IR → código objeto → linker → executável
+.monc → análise e verificação → LLVM IR → código objeto → linker → executável
 ```
 
 O artefato será um executável nativo do sistema de destino. O compilador deve permitir builds para x64 e ARM64, inicialmente nos sistemas operacionais escolhidos para a primeira versão.
@@ -395,17 +395,17 @@ Estrutura sugerida:
 wallet/
 ├── moon.toml
 ├── src/
-│   ├── main.mncyt
-│   ├── init_crypto.mncyt
-│   └── wallet.mncyt
+│   ├── main.monc
+│   ├── init_crypto.monc
+│   └── wallet.monc
 ├── tests/
 └── moon.lock
 ```
 
 Regra inicial de localização do ponto de entrada:
 
-1. Procurar `main.mncyt` na raiz do projeto.
-2. Se não existir, procurar arquivos `.mncyt` contendo `init` no nome, apenas na raiz e em `src/`.
+1. Procurar `main.monc` na raiz do projeto.
+2. Se não existir, procurar arquivos `.monc` contendo `init` no nome, apenas na raiz e em `src/`.
 3. Se houver exatamente um candidato, usá-lo.
 4. Se houver vários, reportar ambiguidade e listar os caminhos.
 5. Se não houver candidato, informar que falta um ponto de entrada.
@@ -415,7 +415,7 @@ A busca não será recursiva nesta versão. A sensibilidade a maiúsculas e min�
 ## 9. Decisões abertas para a próxima revisão
 
 1. esses sistemas operacionais devem fazer parte da primeira versão para x64: Windows 10/11.
-2. A busca por `main` deve incluir nomes em qualquer arquivo que termine com `.mncyt`.
-3. regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo, por exemplo: `Main.mncyt` não ira ser igual a `main.mncyt`.
+2. A busca por `main` deve incluir nomes em qualquer arquivo que termine com `.monc`.
+3. regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo, por exemplo: `Main.monc` não ira ser igual a `main.monc`.
 4. Para erros iremos introduzir primeiro `Result`, exceções ou algum outro modelo determinado depois.
 6. Há uma biblioteca criptográfica consolidada que iremos adicionar posteriormente para a implementação oficial.
