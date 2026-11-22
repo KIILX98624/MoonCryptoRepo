@@ -20,6 +20,7 @@ Anotações de tipo são verificadas no interpretador atual. Por exemplo, uma st
 | Tipo | Estado | Descrição |
 |---|---|---|
 | `Int32`, `Int64` | Implementado | Inteiros assinados com validação de faixa; tipos menores e sem sinal também são verificados quando declarados. |
+| `Float32`, `Float64`, `Double32`, `Double64` | Em implementação | Os quatro nomes foram definidos para a família IEEE-754; `Float32`/`Double32` representam binary32 e `Float64`/`Double64` representam binary64. O lexer já reconhece literais decimais e exponenciais; armazenamento, operações e validação de tipos no interpretador ainda precisam ser concluídos. |
 | `String`, `String32`, `String64` | Implementado | Texto UTF-8; os sufixos ainda aguardam semântica definitiva. |
 | `Char` | Implementado | Caractere. |
 | `Bool` | Implementado | Valores `true` e `false`; condições aceitam `&&`, `||` e `!`, sem conversão implícita de inteiros. |
@@ -44,7 +45,12 @@ Precedência planejada: chamadas e índices, unários, `* / %`, `+ -`, shifts, c
 
 ```ebnf
 program        = { import | declaration } ;
-import         = "use" identifier | "#external" string ;
+import         = "use" identifier | external ;
+external       = "#" "external" string [ ";" | "{" "playCodeC" "{" { c_function } "}" "}" ] ;
+c_function     = c_type identifier "(" [ c_parameters ] ")" [ ";" ] ;
+c_parameters   = c_parameter { "," c_parameter } ;
+c_parameter    = c_type identifier ;
+c_type         = identifier ;
 declaration    = function | variable | constant | struct | class ;
 function       = "fn" identifier "[" [ parameters ] "]" "->" type block ;
 parameters     = parameter { "," parameter } ;
@@ -64,7 +70,9 @@ primary        = literal | identifier | call | index | "(" expression ")" ;
 call           = identifier "[" [ arguments ] "]" ;
 index          = identifier "[" expression "]" ;
 arguments      = expression { "," expression } ;
-literal        = integer | string | char | "true" | "false" | bytes ;
+literal        = integer | float | string | char | "true" | "false" | bytes ;
+float          = digit { digit } "." digit { digit } [ ( "e" | "E" ) [ "+" | "-" ] digit { digit } ]
+               | digit { digit } ( "e" | "E" ) [ "+" | "-" ] digit { digit } ;
 bytes          = "Bytes" "[" [ integer { "," integer } ] "]" ;
 ```
 
