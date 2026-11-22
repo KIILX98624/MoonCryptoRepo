@@ -4,7 +4,7 @@
 
 > **Sintaxe atual:** chamadas usam colchetes: `print[texto]`, `somar[1, 2]` e `crypto.sha256[texto]`. Parênteses para chamadas são sintaxe desatualizada e geram erro.
 
-**Status:** proposta para revisão. A execução nativa, ownership verificado pelo compilador, suporte a Git e prioridades de portabilidade e interoperabilidade com C++ estão definidos como direção. O tratamento de erros continua em aberto.
+**Status:** protótipo interpretado funcional em evolução. O runtime já executa um subconjunto da linguagem MonC, inclui módulos nativos e interoperabilidade inicial com `math.h` e `stdlib.h`. Geração de executáveis nativos e verificação de ownership pelo compilador continuam em desenvolvimento.
 
 > **Estado do repositório:** protótipo nativo em C++20. `monc entry` resolve o arquivo de entrada e `monc run` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc run caminho/para/main.monc` é a interface direta recomendada.
 
