@@ -31,6 +31,9 @@ if ($json -notmatch "json-active=true" -or
     throw "JSON module falhou: $json"
 }
 
+$float = (& $binary run "$PSScriptRoot\fixtures\float.monc" | Out-String).Trim()
+if ($float -ne "sum=3.75`nscaled=7.5`nexp=25`nfloat-ok") { throw "Float falhou: $float" }
+
 $bool = (& $binary run "$PSScriptRoot\fixtures\bool.monc" | Out-String).Trim()
 if ($bool -ne "bool-ok") { throw "Bool falhou: $bool" }
 
