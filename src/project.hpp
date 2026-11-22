@@ -15,7 +15,7 @@ struct EntryResolution {
     [[nodiscard]] bool ok() const { return error.empty(); }
 };
 
-// Resolves main.mncyt first, then a unique init*.mncyt candidate in the root
+// Resolves main.monc first, then a unique init*.monc candidate in the root
 // or its immediate src/ directory. Discovery is intentionally non-recursive.
 EntryResolution resolve_entry(const std::filesystem::path& project_path);
 
