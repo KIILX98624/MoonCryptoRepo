@@ -2327,16 +2327,26 @@ private:
                     if (method == "insert") {
                         // insert[index, value] replaces or applies +, -, * to the existing byte.
                         const auto comma=arg_content.find(',');
-                        if(comma==std::string::npos || args.size()!=2 || args[0].kind!=ValueKind::Integer || args[0].int_val<0 || static_cast<std::size_t>(args[0].int_val)>=data.size()) return std::nullopt;
+                        if(comma==std::string::npos) return std::nullopt;
+                        auto index=evaluate_integer_expression(arg_content.substr(0,comma));
+                        if(!index || *index<0 || static_cast<std::size_t>(*index)>=data.size()) return std::nullopt;
                         std::string operation=arg_content.substr(comma+1); trim(operation);
-                        long long current=data[static_cast<std::size_t>(args[0].int_val)], result=0;
+                        long long current=data[static_cast<std::size_t>(*index)], result=0;
                         if(operation.size()>1 && (operation[0]=='+' || operation[0]=='-' || operation[0]=='*')){
-                            const char op=operation[0]; auto operand=evaluate_integer_expression(operation.substr(1)); if(!operand) return std::nullopt;
-                            if(op=='+') result=current+*operand; else if(op=='-') result=current-*operand; else result=current**operand;
-                        } else { if(!valid_byte(args[1])) return std::nullopt; result=args[1].int_val; }
-                        if(result>255){std::cerr<<"MonC warning: bytearray value clamped to 255.\n";result=255;}
-                        if(result<0){std::cerr<<"MonC warning: bytearray value clamped to 0.\n";result=0;}
-                        data[static_cast<std::size_t>(args[0].int_val)]=static_cast<unsigned char>(result);
+                            const char op=operation[0];
+                            auto operand=evaluate_integer_expression(operation.substr(1));
+                            if(!operand) return std::nullopt;
+                            if(op=='+') result=current+*operand;
+                            else if(op=='-') result=current-*operand;
+                            else result=current*(*operand);
+                        } else {
+                            auto replacement=evaluate_expression(operation);
+                            if(!replacement || !valid_byte(*replacement)) return std::nullopt;
+                            result=replacement->int_val;
+                        }
+                        if(result>255){std::cerr<<"MonC warning: bytearray value clamped to 255.\\n";result=255;}
+                        if(result<0){std::cerr<<"MonC warning: bytearray value clamped to 0.\\n";result=0;}
+                        data[static_cast<std::size_t>(*index)]=static_cast<unsigned char>(result);
                         return Value::make_bool(true);
                     }
                 }
