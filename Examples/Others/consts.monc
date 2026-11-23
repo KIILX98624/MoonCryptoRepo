@@ -1,6 +1,0 @@
-fn main[] -> Int32 {
-    const nome: String32 = "Gustavo";
-    print["Nome: " + nome];
-    return 0;
-}
-//ok

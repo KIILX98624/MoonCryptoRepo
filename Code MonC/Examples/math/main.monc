@@ -1,0 +1,72 @@
+#external "math.h"{
+    playCodeC{
+        double sqrt(double x);
+        double pow(double x, double y);
+        double sin(double x);
+        double cos(double x);
+        double tan(double x);
+        double log(double x);
+        double exp(double x);
+        double hypot(double x, double y);
+        double acos(double x);
+        double asin(double x);
+        double atan(double x);
+        double atan2(double y, double x);
+        double floor(double x);
+        double ceil(double x);
+        double trunc(double x);
+    }
+}
+
+fn main[] -> Int32 {
+    let result_sqrt: Double32 = sqrt(8.0);
+    print[result_sqrt];
+
+    let result_pow: Double32 = pow(2.0, 3.0);
+    print[result_pow];
+
+    let result_sin: Double32 = sin(3.14);
+    print[result_sin];
+
+    let result_cos: Double32 = cos(3.14);
+    print[result_cos];
+
+    let result_tan: Double32 = tan(3.14);
+    print[result_tan];
+
+    let result_log: Double32 = log(2.718);
+    print[result_log];
+
+    let result_exp: Double32 = exp(1.0);
+    print[result_exp];
+
+    let result_hypot: Double32 = hypot(3.0, 4.0);
+    print[result_hypot];
+
+    let result_acos: Double32 = acos(-1.0);
+    print[result_acos];
+
+    let result_asin: Double32 = asin(0.5);
+    print[result_asin];
+
+    let result_atan: Double32 = atan(1.0);
+    print[result_atan];
+
+    let result_atan2: Double32 = atan2(1.0, 2.0);
+    print[result_atan2];
+
+    let result_floor: Double32 = floor(3.7);
+    print[result_floor];
+
+    let result_ceil: Double32 = ceil(3.2);
+    print[result_ceil];
+
+    let result_trunc: Double32 = trunc(3.9);
+    print[result_trunc];
+
+    
+
+    
+
+    return 0;
+}

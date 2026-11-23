@@ -1,6 +1,0 @@
-fn main[] -> Int32 {
-    let letra: Char = 'A'; 
-    print[letra];
-    return 0;
-}
-//ok

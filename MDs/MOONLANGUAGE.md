@@ -33,6 +33,7 @@ Ainda não estão implementadas `atof`, `atol` e `atoll`. Também não há supor
 | Tipo | Estado | Descrição |
 |---|---|---|
 | `Int32`, `Int64` | Implementado | Inteiros assinados com validação de faixa; tipos menores e sem sinal também são verificados quando declarados. |
+| `Float32`, `Float64`, `Double32`, `Double64` | Implementado no runtime inicial | `Float32`/`Double32` usam binary32; `Float64`/`Double64` usam binary64. Literais decimais e exponenciais, armazenamento, operações aritméticas básicas e validação de anotações estão implementados. |
 | `String`, `String32`, `String64` | Implementado | Texto UTF-8; os sufixos ainda aguardam semântica definitiva. |
 | `Char` | Implementado | Caractere. |
 | `Bool` | Implementado | Valores `true` e `false`; condições aceitam `&&`, `||` e `!`, sem conversão implícita de inteiros. |
@@ -46,7 +47,7 @@ Ainda não estão implementadas `atof`, `atol` e `atoll`. Também não há supor
 
 | Grupo | Operadores | Estado |
 |---|---|---|
-| Aritmética | `+`, `-`, `*`, `/`, `%` | Implementado para inteiros. |
+| Aritmética | `+`, `-`, `*`, `/`, `%` | Implementado para inteiros e ponto flutuante básico. |
 | Comparação | `==`, `!=`, `<`, `>`, `<=`, `>=` | Implementado. |
 | Lógico | `&&`, `||`, `!` | Implementado em condições. |
 | Bitwise | `&`, `|`, `^`, `~`, `<<`, `>>` | Implementado para inteiros; deslocamentos inválidos produzem erro. |
@@ -57,7 +58,12 @@ Precedência planejada: chamadas e índices, unários, `* / %`, `+ -`, shifts, c
 
 ```ebnf
 program        = { import | declaration } ;
-import         = "use" identifier | "#external" string ;
+import         = "use" identifier | external ;
+external       = "#" "external" string [ ";" | "{" "playCodeC" "{" { c_function } "}" "}" ] ;
+c_function     = c_type identifier "(" [ c_parameters ] ")" [ ";" ] ;
+c_parameters   = c_parameter { "," c_parameter } ;
+c_parameter    = c_type identifier ;
+c_type         = identifier ;
 declaration    = function | variable | constant | struct | class ;
 function       = "fn" identifier "[" [ parameters ] "]" "->" type block ;
 parameters     = parameter { "," parameter } ;
@@ -77,10 +83,33 @@ primary        = literal | identifier | call | index | "(" expression ")" ;
 call           = identifier "[" [ arguments ] "]" ;
 index          = identifier "[" expression "]" ;
 arguments      = expression { "," expression } ;
-literal        = integer | string | char | "true" | "false" | bytes ;
+literal        = integer | float | string | char | "true" | "false" | bytes ;
+float          = digit { digit } "." digit { digit } [ ( "e" | "E" ) [ "+" | "-" ] digit { digit } ]
+               | digit { digit } ( "e" | "E" ) [ "+" | "-" ] digit { digit } ;
 bytes          = "Bytes" "[" [ integer { "," integer } ] "]" ;
 ```
 
+
+## Arrays nativos (`Array<T>`)
+
+
+> **Nota de modificação (2026-11-21):** foi adicionada a primeira implementação de arrays nativos ao interpretador. Arrays armazenam valores em sequência, compartilham o armazenamento interno entre cópias de `Value` no interpretador e oferecem criação, indexação e operações básicas. A verificação de `Array<T>` valida os elementos na declaração e nas operações de mutação; não representa ainda generics completos nem ownership verificado pelo compilador.
+
+```monc
+fn main[] -> Int32 {
+    let numeros: Array<Int32> = Array[10, 20, 30];
+    array.push[numeros, 40];
+    print[numeros[0]];
+    print[array.length[numeros]];
+    array.set[numeros, 0, 100];
+    array.remove[numeros, 1];
+    let ultimo: Int32 = array.pop[numeros];
+    array.clear[numeros];
+    return 0;
+}
+```
+
+API: `Array[...]`, `array.length[array]`, `array.push[array, valor]`, `array.pop[array]`, `array.get[array, indice]`, `array.set[array, indice, valor]`, `array.remove[array, indice]` e `array.clear[array]`. Índices começam em zero. Índices inválidos, remoção de array vazio e tipos incompatíveis fazem a operação falhar no interpretador.
 
 ## Módulo JSON nativo
 
@@ -187,3 +216,8 @@ monc ast arquivo.monc
 ```
 
 Por enquanto ela lista funções, parâmetros e tipos de retorno.
+
+
+## Mudança de extensão e comando (2026-11-21)
+
+A extensão oficial dos arquivos-fonte passou de `.mncyt` para `.monc`. A execução recomendada agora é `monc run caminho/para/main.monc`; para projetos, `monc run caminho/para/pasta` continua disponível e localiza `main.monc` ou um único arquivo `init*.monc`.

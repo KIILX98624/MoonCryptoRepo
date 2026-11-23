@@ -22,7 +22,7 @@ O projeto ainda está em fase inicial. Não trate o protótipo atual como uma im
 
 ## Estado atual
 
-O executável `moon` é um protótipo em C++20. O comando global é usado com o nome real do arquivo, sem os símbolos `<` e `>`:
+O executável `monc` é o interpretador/protótipo da linguagem MonC, implementado em C++20. O comando global é usado com o nome real do arquivo, sem os símbolos `<` e `>`:
 
 ```powershell
 monc examples\hello\main.monc

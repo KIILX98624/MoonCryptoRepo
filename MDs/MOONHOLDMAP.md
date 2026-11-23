@@ -253,7 +253,7 @@ A MonC reconhece atualmente `math.h` e `stdlib.h` por meio de `#external` com bl
 ## Execução atual
 
 ```powershell
-monc caminho\para\main.monc
+monc run caminho\para\main.monc
 ```
 
 Ou, a partir do projeto:
@@ -270,6 +270,13 @@ monc run Examples\Others\while.monc
 4. `const`, `struct`, `class`, genéricos e interfaces.
 5. Biblioteca criptográfica oficial com APIs de alto nível.
 6. Diagnósticos completos no VS Code.
+
+## Arrays nativos
+
+
+> **Nota de modificação (2026-11-21):** o protótipo agora inclui a API inicial de arrays `Array<T>`. É possível criar com `Array[...]`, acessar por índice (`itens[0]`) e usar `array.push`, `array.pop`, `array.get`, `array.set`, `array.remove`, `array.clear` e `array.length`. A tipagem genérica é validada no interpretador, mas generics completos e ownership ainda não estão implementados.
+
+Exemplo: `let numeros: Array<Int32> = Array[10, 20, 30];`
 
 ## Bytes
 
@@ -301,3 +308,12 @@ O comando `monc lex` lista tokens com linha e coluna. Essa camada já existe, ma
 ## Verificação de tipos
 
 Anotações como `Int32`, `String32`, `Char`, `Bool` e `Bytes` são verificadas nas declarações e atribuições. Valores incompatíveis produzem diagnóstico com arquivo, linha e coluna.
+
+
+## Nota de modificação: identidade `.monc` (2026-11-21)
+
+- Extensão oficial dos arquivos-fonte: `.monc`.
+- Nome do executável/target CMake: `monc` (`monc.exe` no Windows).
+- Execução direta: `monc run caminho/para/main.monc`.
+- Execução por diretório de projeto: `monc run caminho/para/projeto`.
+- Exemplos e fixtures migrados para `.monc`; suporte de sintaxe do VS Code atualizado.
