@@ -53,6 +53,6 @@ add_test(
     NAME bytearray_builtins
     COMMAND ${CMAKE_COMMAND}
         -DMONC=$<TARGET_FILE:monc>
-        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/bytearray_builtins.monc
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/check_bytearray_builtins.cmake
+        "-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/bytearray_builtins.monc"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/check_bytearray_builtins.cmake"
 )
