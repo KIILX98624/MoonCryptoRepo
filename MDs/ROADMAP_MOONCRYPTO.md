@@ -136,3 +136,17 @@ Manter uma tabela de estado (planejado, parcial, implementado, por plataforma) p
 7. Atualizar documentação, exemplos e instruções de plataforma conforme cada recurso muda de estado.
 
 Esta ordem é uma sugestão de dependências: as decisões de sintaxe e semântica devem preceder recursos que dependam delas, como arrays e APIs criptográficas estáveis.
+
+
+## Parte 1: built-ins e ByteArray
+
+**Em implementação na branch `feature/part-1-python-builtins-bytearray`.**
+
+Já adicionados ao runtime nesta branch:
+- Tipo mutável `ByteArray`, construtores por tamanho e por `Array`.
+- Indexação, atribuição de um ou vários índices em ordem crescente e propriedade `length`.
+- Métodos `append`, `pop`, `vpop`, `insert`, `clear`, `copy`, `reverse`, `contains`, `index`, `count`, `extend`, `slice` e `fill`.
+- Built-ins `all`, `any`, `ascii`, `bin`, `bool` e o placeholder `breakpoint`.
+- Fixture de integração e teste CTest para esse subconjunto.
+
+**Ainda pendente nesta Parte 1:** as demais built-ins da lista de comparação, como conversores genéricos, funções de iteração, introspecção e utilitários. Elas não devem ser consideradas implementadas só porque a primeira leva foi adicionada. A suíte CTest da branch precisa passar nos ambientes Windows e Linux antes de marcar a parte como concluída.
