@@ -22,6 +22,10 @@ if ($crypto -ne "sha-84cfbae28e7ce7e83d00e8ff8b4278c2385dbeecf7149b89287d94f8dfd
 $bytes = (& $binary run "$PSScriptRoot\fixtures\bytes.monc" | Out-String).Trim()
 if ($bytes -notmatch "byte-0=1" -or $bytes -notmatch "byte-2=255") { throw "Bytes falhou: $bytes" }
 
+$builtins = (& $binary run "$PSScriptRoot\fixtures\bytearray_builtins.monc" | Out-String).Trim()
+$expectedBuiltins = @("12,60,42,50", "30", "true", "2", "1", "1,2,12,42,50", "2,12", "1,9,9,42,50", "2", "9,1", "true", "true", "false", "0b1011", "'Ol\xe1'", "0") -join [Environment]::NewLine
+if ($builtins -ne $expectedBuiltins) { throw ("ByteArray/Python built-ins falharam: " + $builtins) }
+
 $json = (& $binary run "$PSScriptRoot\fixtures\json.monc" | Out-String).Trim()
 if ($json -notmatch "json-active=true" -or
     $json -notmatch "json-name=MoonCrypto" -or
