@@ -2149,7 +2149,18 @@ private:
                         case ValueKind::ByteArray: return v.bytearray_val && !v.bytearray_val->empty();
                         case ValueKind::Bytes: return !v.bytes_val.empty();
                         case ValueKind::Array: return v.array_val && !v.array_val->empty();
-                        case ValueKind::Json: return v.json_val && v.json_val->type != JsonNode::Type::Null;
+                        case ValueKind::Json:
+                            if (!v.json_val) return false;
+                            switch (v.json_val->type) {
+                                case JsonNode::Type::Null: return false;
+                                case JsonNode::Type::Boolean: return v.json_val->boolean_value;
+                                case JsonNode::Type::Number:
+                                    try { return std::stod(v.json_val->scalar) != 0.0; } catch (...) { return false; }
+                                case JsonNode::Type::String: return !v.json_val->scalar.empty();
+                                case JsonNode::Type::Array: return !v.json_val->array.empty();
+                                case JsonNode::Type::Object: return !v.json_val->object.empty();
+                            }
+                            return false;
                         case ValueKind::Pointer: return v.pointer_val != nullptr;
                         case ValueKind::Result: return v.result_ok;
                     }
@@ -2166,7 +2177,7 @@ private:
                 else if (sequence.kind == ValueKind::ByteArray && sequence.bytearray_val) {
                     for (auto b : *sequence.bytearray_val) values.push_back(Value::make_int(b, "UInt8"));
                 } else if (sequence.kind == ValueKind::String) {
-                    for (unsigned char c : sequence.str_val) values.push_back(Value::make_int(c, "UInt8"));
+                    return Value::make_bool(fn_name == "all" ? true : !sequence.str_val.empty());
                 } else return std::nullopt;
                 bool result = fn_name == "all";
                 for (const auto& value : values) {
