@@ -2185,13 +2185,26 @@ private:
             if (fn_name == "ascii") {
                 auto args = parse_argument_list(arg_content);
                 if (args.size() != 1) return std::nullopt;
-                std::string raw = args[0].to_string();
+                if (args[0].kind != ValueKind::String) return Value::make_string(args[0].to_string());
+                const std::string& raw = args[0].str_val;
                 std::ostringstream out;
                 out << "'";
-                for (unsigned char c : raw) {
-                    if (c == '\\' || c == '\'') out << '\\' << static_cast<char>(c);
-                    else if (c >= 32 && c < 127) out << static_cast<char>(c);
-                    else out << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << std::dec;
+                for (std::size_t i = 0; i < raw.size();) {
+                    const unsigned char lead = static_cast<unsigned char>(raw[i]);
+                    unsigned int cp = lead;
+                    std::size_t width = 1;
+                    if ((lead & 0xE0) == 0xC0 && i + 1 < raw.size()) { cp = lead & 0x1F; width = 2; }
+                    else if ((lead & 0xF0) == 0xE0 && i + 2 < raw.size()) { cp = lead & 0x0F; width = 3; }
+                    else if ((lead & 0xF8) == 0xF0 && i + 3 < raw.size()) { cp = lead & 0x07; width = 4; }
+                    if (width > 1) {
+                        for (std::size_t k = 1; k < width; ++k) cp = (cp << 6) | (static_cast<unsigned char>(raw[i+k]) & 0x3F);
+                    }
+                    if (cp == '\\\\' || cp == '\\'') out << '\\\\' << static_cast<char>(cp);
+                    else if (cp >= 32 && cp < 127) out << static_cast<char>(cp);
+                    else if (cp <= 0xFF) out << "\\\\x" << std::hex << std::setw(2) << std::setfill('0') << cp << std::dec;
+                    else if (cp <= 0xFFFF) out << "\\\\u" << std::hex << std::setw(4) << std::setfill('0') << cp << std::dec;
+                    else out << "\\\\U" << std::hex << std::setw(8) << std::setfill('0') << cp << std::dec;
+                    i += width;
                 }
                 out << "'";
                 return Value::make_string(out.str());
