@@ -38,13 +38,13 @@ add_test(
     NAME float_runtime
     COMMAND ${CMAKE_COMMAND}
         -DMONC=$<TARGET_FILE:monc>
-        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Test/fixtures/float.monc
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/Test/check_float.cmake
+        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/float.monc
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/cheak_float.cmake
 )
 add_test(
     NAME c_interop_math
     COMMAND ${CMAKE_COMMAND}
         -DMONC=$<TARGET_FILE:monc>
-        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Test/fixtures/c_interop.monc
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/Test/check_c_interop.cmake
+        -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/c_interop.monc
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/check_c_interop.cmake
 )
