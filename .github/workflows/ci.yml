@@ -6,6 +6,7 @@ on:
       - main
       - feature/monc-float-runtime
       - feature/c-interop-void-pointers
+      - feature/part-1-python-builtins-bytearray
   pull_request:
     branches:
       - main
