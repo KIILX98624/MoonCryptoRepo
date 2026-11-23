@@ -280,3 +280,5 @@ Os métodos que alteram a sequência retornam `Bool` de sucesso, exceto `pop` e 
 As regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
 
 **Validação:** foi adicionado o fixture `Code MonC/SmokeTest/fixtures/bytearray_builtins.monc` e sua chamada à suíte `smoke.ps1`. A execução da suíte ainda precisa ser confirmada em uma máquina com a toolchain C++20 configurada.
+
+> **Escopo desta etapa:** este commit cobre o `ByteArray` e as built-ins `all`, `any`, `ascii`, `bin`, `bool` e o placeholder `breakpoint`. As demais built-ins da lista comparativa continuam pendentes e serão implementadas após definição de sintaxe e comportamento.
