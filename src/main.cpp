@@ -2176,6 +2176,9 @@ private:
             if (fn_name == "bin") {
                 auto args = parse_argument_list(arg_content);
                 if (args.size() != 1 || (args[0].kind != ValueKind::Integer && args[0].kind != ValueKind::Float)) return std::nullopt;
+                if (args[0].kind == ValueKind::Float &&
+                    (args[0].float_val > static_cast<double>(std::numeric_limits<long long>::max()) ||
+                     args[0].float_val < static_cast<double>(std::numeric_limits<long long>::min()))) return std::nullopt;
                 long long n = args[0].kind == ValueKind::Integer ? args[0].int_val :
                     static_cast<long long>(std::round(args[0].float_val));
                 if (n == 0) return Value::make_string("0b0");
@@ -2808,6 +2811,9 @@ private:
             ++position_;
         }
         const std::string name = source_.substr(start, position_ - start);
+        if (constants_.find(name) != constants_.end()) {
+            return fail("cannot assign to const variable '" + name + "'");
+        }
         whitespace();
         if (position_ < source_.size() && source_[position_] == '[') {
             const auto variable = variables_.find(name);
@@ -2855,9 +2861,6 @@ private:
                     (*variable->second.bytearray_val)[positions[i]] = static_cast<unsigned char>(values[i].int_val);
             }
             return true;
-        }
-        if (constants_.find(name) != constants_.end()) {
-            return fail("cannot assign to const variable '" + name + "'");
         }
         whitespace();
         if (position_ >= source_.size() || source_[position_] != '=') {
