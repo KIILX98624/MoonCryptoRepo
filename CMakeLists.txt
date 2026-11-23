@@ -39,7 +39,7 @@ add_test(
     COMMAND ${CMAKE_COMMAND}
         -DMONC=$<TARGET_FILE:monc>
         "-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/float.monc"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/cheak_float.cmake"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/check_float.cmake"
 )
 add_test(
     NAME c_interop_math
