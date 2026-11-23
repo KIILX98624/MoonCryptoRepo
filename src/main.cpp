@@ -2336,9 +2336,13 @@ private:
                             const char op=operation[0];
                             auto operand=evaluate_integer_expression(operation.substr(1));
                             if(!operand) return std::nullopt;
-                            if(op=='+') result=current+*operand;
-                            else if(op=='-') result=current-*operand;
-                            else result=current*(*operand);
+                            long double calculated=static_cast<long double>(current);
+                            if(op=='+') calculated+=static_cast<long double>(*operand);
+                            else if(op=='-') calculated-=static_cast<long double>(*operand);
+                            else calculated*=static_cast<long double>(*operand);
+                            if(calculated>255.0L) result=256;
+                            else if(calculated<0.0L) result=-1;
+                            else result=static_cast<long long>(calculated);
                         } else {
                             auto replacement=evaluate_expression(operation);
                             if(!replacement || !valid_byte(*replacement)) return std::nullopt;
