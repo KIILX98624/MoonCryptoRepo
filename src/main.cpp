@@ -330,6 +330,7 @@ enum class ValueKind {
     Char,
     Boolean,
     Bytes,
+    ByteArray,
     Array,
     Json,
     Result,
@@ -345,6 +346,7 @@ struct Value {
     char char_val = '\0';
     bool bool_val = false;
     std::vector<unsigned char> bytes_val;
+    std::shared_ptr<std::vector<unsigned char>> bytearray_val = std::make_shared<std::vector<unsigned char>>();
     std::shared_ptr<std::vector<Value>> array_val = std::make_shared<std::vector<Value>>();
     std::string array_element_type = "Inferred";
     std::shared_ptr<JsonNode> json_val;
@@ -398,6 +400,14 @@ struct Value {
         val.kind = ValueKind::Bytes;
         val.type_name = "Bytes";
         val.bytes_val = std::move(v);
+        return val;
+    }
+
+    static Value make_bytearray(std::vector<unsigned char> v) {
+        Value val;
+        val.kind = ValueKind::ByteArray;
+        val.type_name = "ByteArray";
+        val.bytearray_val = std::make_shared<std::vector<unsigned char>>(std::move(v));
         return val;
     }
 
@@ -460,6 +470,16 @@ struct Value {
                 std::ostringstream out;
                 for (const auto byte : bytes_val) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
                 return out.str();
+            }
+            case ValueKind::ByteArray: {
+                std::string out;
+                if (bytearray_val) {
+                    for (std::size_t i = 0; i < bytearray_val->size(); ++i) {
+                        if (i) out += ",";
+                        out += std::to_string((*bytearray_val)[i]);
+                    }
+                }
+                return out;
             }
             case ValueKind::Array: {
                 std::string out = "[";
@@ -2092,6 +2112,93 @@ private:
             std::string fn_name = text.substr(0, open_pos);
             trim(fn_name);
 
+            if (fn_name == "bytearray") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1) return std::nullopt;
+                std::vector<unsigned char> data;
+                if (args[0].kind == ValueKind::Integer) {
+                    if (args[0].int_val < 0 || args[0].int_val > 1000000) return std::nullopt;
+                    data.resize(static_cast<std::size_t>(args[0].int_val), 0);
+                } else if (args[0].kind == ValueKind::Array && args[0].array_val) {
+                    for (const auto& item : *args[0].array_val) {
+                        if (item.kind != ValueKind::Integer || item.int_val < 0 || item.int_val > 255) return std::nullopt;
+                        data.push_back(static_cast<unsigned char>(item.int_val));
+                    }
+                } else if (args[0].kind == ValueKind::ByteArray && args[0].bytearray_val) {
+                    data = *args[0].bytearray_val;
+                } else return std::nullopt;
+                return Value::make_bytearray(std::move(data));
+            }
+            if (fn_name == "all" || fn_name == "any" || fn_name == "bool") {
+                auto args = parse_argument_list(arg_content);
+                auto truthy = [](const Value& v) {
+                    switch (v.kind) {
+                        case ValueKind::Boolean: return v.bool_val;
+                        case ValueKind::Integer: return v.int_val != 0;
+                        case ValueKind::Float: return v.float_val != 0.0;
+                        case ValueKind::String: return !v.str_val.empty();
+                        case ValueKind::Char: return v.char_val != '\0';
+                        case ValueKind::ByteArray: return v.bytearray_val && !v.bytearray_val->empty();
+                        case ValueKind::Bytes: return !v.bytes_val.empty();
+                        case ValueKind::Array: return v.array_val && !v.array_val->empty();
+                        case ValueKind::Json: return v.json_val && v.json_val->type != JsonNode::Type::Null;
+                        case ValueKind::Pointer: return v.pointer_val != nullptr;
+                        case ValueKind::Result: return v.result_ok;
+                    }
+                    return false;
+                };
+                if (fn_name == "bool") {
+                    if (args.size() != 1) return std::nullopt;
+                    return Value::make_bool(truthy(args[0]));
+                }
+                if (args.size() != 1) return std::nullopt;
+                const Value& sequence = args[0];
+                std::vector<Value> values;
+                if (sequence.kind == ValueKind::Array && sequence.array_val) values = *sequence.array_val;
+                else if (sequence.kind == ValueKind::ByteArray && sequence.bytearray_val) {
+                    for (auto b : *sequence.bytearray_val) values.push_back(Value::make_int(b, "UInt8"));
+                } else if (sequence.kind == ValueKind::String) {
+                    for (unsigned char c : sequence.str_val) values.push_back(Value::make_int(c, "UInt8"));
+                } else return std::nullopt;
+                bool result = fn_name == "all";
+                for (const auto& value : values) {
+                    if (fn_name == "all" && !truthy(value)) { result = false; break; }
+                    if (fn_name == "any" && truthy(value)) { result = true; break; }
+                }
+                return Value::make_bool(result);
+            }
+            if (fn_name == "bin") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1 || (args[0].kind != ValueKind::Integer && args[0].kind != ValueKind::Float)) return std::nullopt;
+                long long n = args[0].kind == ValueKind::Integer ? args[0].int_val :
+                    static_cast<long long>(std::round(args[0].float_val));
+                if (n == 0) return Value::make_string("0b0");
+                const bool negative = n < 0;
+                unsigned long long magnitude = negative
+                    ? static_cast<unsigned long long>(-(n + 1)) + 1ULL
+                    : static_cast<unsigned long long>(n);
+                std::string bits;
+                while (magnitude) { bits.insert(bits.begin(), (magnitude & 1ULL) ? '1' : '0'); magnitude >>= 1; }
+                return Value::make_string(std::string(negative ? "-0b" : "0b") + bits);
+            }
+            if (fn_name == "ascii") {
+                auto args = parse_argument_list(arg_content);
+                if (args.size() != 1) return std::nullopt;
+                std::string raw = args[0].to_string();
+                std::ostringstream out;
+                out << "'";
+                for (unsigned char c : raw) {
+                    if (c == '\\' || c == '\'') out << '\\' << static_cast<char>(c);
+                    else if (c >= 32 && c < 127) out << static_cast<char>(c);
+                    else out << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << std::dec;
+                }
+                out << "'";
+                return Value::make_string(out.str());
+            }
+            if (fn_name == "breakpoint") {
+                if (!arg_content.empty()) return std::nullopt;
+                return Value::make_int(0);
+            }
             if (fn_name == "Array") {
                 auto values = parse_argument_list(arg_content);
                 if (values.empty() && !arg_content.empty()) return std::nullopt;
@@ -2148,6 +2255,89 @@ private:
                     if (args.size() != 1) return std::nullopt;
                     items.clear();
                     return Value::make_bool(true);
+                }
+            }
+            const auto method_dot = fn_name.find('.');
+            if (method_dot != std::string::npos) {
+                const std::string object_name = fn_name.substr(0, method_dot);
+                const std::string method = fn_name.substr(method_dot + 1);
+                auto object = variables_.find(object_name);
+                if (object != variables_.end() && object->second.kind == ValueKind::ByteArray && object->second.bytearray_val) {
+                    auto& data = *object->second.bytearray_val;
+                    auto args = parse_argument_list(arg_content);
+                    auto valid_byte = [](const Value& v) { return v.kind == ValueKind::Integer && v.int_val >= 0 && v.int_val <= 255; };
+                    if (method == "append") {
+                        if (args.empty()) return std::nullopt;
+                        for (const auto& v : args) { if (!valid_byte(v)) return std::nullopt; data.push_back(static_cast<unsigned char>(v.int_val)); }
+                        return Value::make_bool(true);
+                    }
+                    if (method == "pop") {
+                        if (args.size()!=1 || args[0].kind!=ValueKind::Integer || args[0].int_val<0 || static_cast<std::size_t>(args[0].int_val)>=data.size()) return std::nullopt;
+                        const auto index=static_cast<std::size_t>(args[0].int_val); const auto removed=data[index]; data.erase(data.begin()+static_cast<std::ptrdiff_t>(index));
+                        return Value::make_int(removed,"UInt8");
+                    }
+                    if (method == "vpop") {
+                        if (args.size()!=1 || !valid_byte(args[0])) return std::nullopt;
+                        auto it=std::find(data.begin(),data.end(),static_cast<unsigned char>(args[0].int_val));
+                        if (it==data.end()) return std::nullopt;
+                        const auto removed=*it; data.erase(it); return Value::make_int(removed,"UInt8");
+                    }
+                    if (method == "clear") {
+                        if (args.empty()) data.clear();
+                        else if (args.size()==1 && args[0].kind==ValueKind::Integer && args[0].int_val>=0 && static_cast<std::size_t>(args[0].int_val)<data.size())
+                            data.erase(data.begin()+static_cast<std::ptrdiff_t>(args[0].int_val),data.end());
+                        else return std::nullopt;
+                        return Value::make_bool(true);
+                    }
+                    if (method == "reverse") { if(!args.empty()) return std::nullopt; std::reverse(data.begin(),data.end()); return Value::make_bool(true); }
+                    if (method == "copy") { if(!args.empty()) return std::nullopt; return Value::make_bytearray(data); }
+                    if (method == "contains" || method == "index" || method == "count") {
+                        if(args.size()!=1 || !valid_byte(args[0])) return std::nullopt;
+                        const auto value=static_cast<unsigned char>(args[0].int_val);
+                        const auto count=static_cast<long long>(std::count(data.begin(),data.end(),value));
+                        if(method=="contains") return Value::make_bool(count>0);
+                        if(method=="count") return Value::make_int(count,"Int32");
+                        auto it=std::find(data.begin(),data.end(),value); if(it==data.end()) return std::nullopt;
+                        return Value::make_int(static_cast<long long>(std::distance(data.begin(),it)),"Int32");
+                    }
+                    if (method == "extend") {
+                        bool at_front=false; std::size_t source_index=0;
+                        if(args.size()==2 && args[0].kind==ValueKind::Boolean){at_front=args[0].bool_val;source_index=1;}
+                        else if(args.size()!=1) return std::nullopt;
+                        std::vector<unsigned char> extra;
+                        const auto& source=args[source_index];
+                        if(source.kind==ValueKind::Array && source.array_val){for(const auto& v:*source.array_val){if(!valid_byte(v))return std::nullopt;extra.push_back(static_cast<unsigned char>(v.int_val));}}
+                        else if(source.kind==ValueKind::ByteArray && source.bytearray_val) extra=*source.bytearray_val;
+                        else return std::nullopt;
+                        if(at_front) data.insert(data.begin(),extra.begin(),extra.end()); else data.insert(data.end(),extra.begin(),extra.end());
+                        return Value::make_bool(true);
+                    }
+                    if (method == "slice") {
+                        if(args.size()!=2 || args[0].kind!=ValueKind::Integer || args[1].kind!=ValueKind::Integer ||
+                           args[0].int_val<0 || args[1].int_val<args[0].int_val || static_cast<std::size_t>(args[1].int_val)>data.size()) return std::nullopt;
+                        return Value::make_bytearray(std::vector<unsigned char>(data.begin()+args[0].int_val,data.begin()+args[1].int_val));
+                    }
+                    if (method == "fill") {
+                        if(args.size()!=3 || !valid_byte(args[0]) || args[1].kind!=ValueKind::Integer || args[2].kind!=ValueKind::Integer ||
+                           args[1].int_val<0 || args[2].int_val<args[1].int_val || static_cast<std::size_t>(args[2].int_val)>data.size()) return std::nullopt;
+                        std::fill(data.begin()+args[1].int_val,data.begin()+args[2].int_val,static_cast<unsigned char>(args[0].int_val));
+                        return Value::make_bool(true);
+                    }
+                    if (method == "insert") {
+                        // insert[index, value] replaces or applies +, -, * to the existing byte.
+                        const auto comma=arg_content.find(',');
+                        if(comma==std::string::npos || args.size()!=2 || args[0].kind!=ValueKind::Integer || args[0].int_val<0 || static_cast<std::size_t>(args[0].int_val)>=data.size()) return std::nullopt;
+                        std::string operation=arg_content.substr(comma+1); trim(operation);
+                        long long current=data[static_cast<std::size_t>(args[0].int_val)], result=0;
+                        if(operation.size()>1 && (operation[0]=='+' || operation[0]=='-' || operation[0]=='*')){
+                            const char op=operation[0]; auto operand=evaluate_integer_expression(operation.substr(1)); if(!operand) return std::nullopt;
+                            if(op=='+') result=current+*operand; else if(op=='-') result=current-*operand; else result=current**operand;
+                        } else { if(!valid_byte(args[1])) return std::nullopt; result=args[1].int_val; }
+                        if(result>255){std::cerr<<"MonC warning: bytearray value clamped to 255.\n";result=255;}
+                        if(result<0){std::cerr<<"MonC warning: bytearray value clamped to 0.\n";result=0;}
+                        data[static_cast<std::size_t>(args[0].int_val)]=static_cast<unsigned char>(result);
+                        return Value::make_bool(true);
+                    }
                 }
             }
             if (fn_name == "json.parse") {
@@ -2308,6 +2498,13 @@ private:
                     fail("use of moved value '" + fn_name + "'");
                     return std::nullopt;
                 }
+                if (variable->second.kind == ValueKind::ByteArray && variable->second.bytearray_val) {
+                    const std::string index_text=text.substr(open_pos+1,text.size()-open_pos-2);
+                    if(index_text.empty()) return variable->second;
+                    auto index=evaluate_integer_expression(index_text);
+                    if(!index || *index<0 || static_cast<std::size_t>(*index)>=variable->second.bytearray_val->size()) return std::nullopt;
+                    return Value::make_int((*variable->second.bytearray_val)[static_cast<std::size_t>(*index)],"UInt8");
+                }
                 if (variable->second.kind == ValueKind::Bytes) {
                     auto index = evaluate_integer_expression(text.substr(open_pos + 1, text.size() - open_pos - 2));
                     if (!index || *index < 0 || static_cast<std::size_t>(*index) >= variable->second.bytes_val.size()) return std::nullopt;
@@ -2340,6 +2537,13 @@ private:
             return std::nullopt;
         }
 
+        const auto property_dot=text.find('.');
+        if(property_dot!=std::string::npos){
+            const auto base=text.substr(0,property_dot), property=text.substr(property_dot+1);
+            const auto obj=variables_.find(base);
+            if(obj!=variables_.end() && obj->second.kind==ValueKind::ByteArray && obj->second.bytearray_val && property=="length")
+                return Value::make_int(static_cast<long long>(obj->second.bytearray_val->size()),"Int32");
+        }
         auto it = variables_.find(text);
         if (it != variables_.end()) {
             return it->second;
