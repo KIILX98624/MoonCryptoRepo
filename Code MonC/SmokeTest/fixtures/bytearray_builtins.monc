@@ -1,0 +1,47 @@
+fn main[] -> Int32 {
+    let dados = bytearray[Array[10, 20, 30]];
+    dados.append[40, 50];
+    let removido: UInt8 = dados.pop[2];
+
+    dados.insert[0, +5];
+    dados.insert[1, *3];
+    dados.insert[2, 99];
+    dados[0, 2] = 12, 42;
+
+    print[dados[]];
+    print[removido];
+
+    let possui: Bool = dados.contains[60];
+    let posicao: Int32 = dados.index[42];
+    let quantidade: Int32 = dados.count[12];
+    print[possui];
+    print[posicao];
+    print[quantidade];
+
+    dados.vpop[60];
+    dados.extend[true, Array[1, 2]];
+    print[dados[]];
+
+    let recorte = dados.slice[1, 3];
+    print[recorte[]];
+
+    dados.fill[9, 1, 3];
+    print[dados[]];
+
+    dados.clear[2];
+    print[dados.length];
+
+    let copia = dados.copy[];
+    copia.reverse[];
+    print[copia[]];
+
+    print[all[Array[true, true]]];
+    print[any[Array[false, true]]];
+    print[bool[0]];
+    print[bin[10.5]];
+    print[ascii["Olá"]];
+    let ponto = breakpoint[];
+    print[ponto];
+
+    return 0;
+}
