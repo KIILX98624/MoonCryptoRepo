@@ -474,3 +474,62 @@ A busca não será recursiva nesta versão. A sensibilidade a maiúsculas e min�
 4. Para erros, você prefere investigar primeiro `Result`, exceções ou um modelo combinado?
 5. Quer definir agora um manifesto mínimo, incluindo formato e campo opcional `entry`?
 6. Há uma biblioteca criptográfica consolidada que você prefira avaliar para a implementação oficial?
+
+
+## ByteArray e funções built-in (Parte 1)
+
+A branch `feature/part-1-python-builtins-bytearray` introduz o tipo mutável `ByteArray` e as primeiras funções built-in inspiradas no Python.
+
+### Criação e acesso
+
+```monc
+let dados = bytearray[5]; // cinco bytes inicializados com zero
+let outros = bytearray[Array[10, 20, 30]];
+
+dados[0] = 12;
+dados[1, 3] = 40, 50; // índices em ordem crescente
+print[dados[]];       // sequência decimal separada por vírgulas
+print[dados.length];  // propriedade Int32
+```
+
+Cada elemento deve ser um inteiro entre 0 e 255. Leituras e escritas fora dos limites geram erro. A atribuição com vários índices exige índices únicos em ordem estritamente crescente, quantidade igual de valores e posições já existentes. Ela não aumenta automaticamente o tamanho.
+
+### Métodos de ByteArray
+
+| Sintaxe | Comportamento |
+|---|---|
+| `dados.append[a, b, ...]` | Adiciona um ou mais bytes ao final. |
+| `dados.pop[indice]` | Remove e retorna o byte naquela posição. Os seguintes avançam uma posição. |
+| `dados.vpop[valor]` | Remove e retorna a primeira ocorrência do valor. Falha se não existir. |
+| `dados.insert[indice, valor]` | Substitui o byte naquela posição. |
+| `dados.insert[indice, +n]` | Soma `n` ao byte existente. |
+| `dados.insert[indice, -n]` | Subtrai `n` do byte existente. |
+| `dados.insert[indice, *n]` | Multiplica o byte existente por `n`. |
+| `dados.clear[]` | Remove todos os bytes. |
+| `dados.clear[indice]` | Remove o byte indicado e todos os seguintes. |
+| `dados.copy[]` | Retorna uma cópia independente. |
+| `dados.reverse[]` | Inverte a sequência no próprio objeto. |
+| `dados.contains[valor]` | Retorna `Bool` indicando se o valor existe. |
+| `dados.index[valor]` | Retorna o índice da primeira ocorrência; falha se não existir. |
+| `dados.count[valor]` | Retorna a quantidade de ocorrências como `Int32`. |
+| `dados.extend[origem]` | Adiciona os bytes de um `Array` ou `ByteArray` ao final. |
+| `dados.extend[true, origem]` | Adiciona os bytes da origem no início. |
+| `dados.slice[inicio, fim]` | Retorna um novo `ByteArray`; início inclusivo e fim exclusivo. |
+| `dados.fill[valor, inicio, fim]` | Preenche o intervalo, com fim exclusivo. |
+
+Os métodos que alteram a sequência retornam `Bool` de sucesso, exceto `pop` e `vpop`, que retornam o byte removido. `insert` limita resultados abaixo de zero a 0 e acima de 255 a 255, emitindo um aviso no terminal. A atribuição de variáveis compartilha o mesmo objeto mutável; `copy[]` cria uma sequência independente.
+
+### Funções built-in desta etapa
+
+| Função | Comportamento |
+|---|---|
+| `bool[valor]` | Converte usando as regras de truthiness. |
+| `all[sequencia]` | Retorna verdadeiro se todos os elementos forem truthy; sequência vazia retorna verdadeiro. |
+| `any[sequencia]` | Retorna verdadeiro se algum elemento for truthy; sequência vazia retorna falso. |
+| `bin[numero]` | Retorna a representação binária com prefixo `0b`; valores fracionários são arredondados para o inteiro mais próximo, com meio afastando-se de zero. |
+| `ascii[texto]` | Retorna a representação textual entre aspas, escapando caracteres não ASCII. |
+| `breakpoint[]` | Atualmente é um placeholder sem interrupção do depurador; retorna 0. |
+
+As regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
+
+**Validação:** foi adicionado o fixture `Code MonC/SmokeTest/fixtures/bytearray_builtins.monc` e sua chamada à suíte `smoke.ps1`. A execução da suíte ainda precisa ser confirmada em uma máquina com a toolchain C++20 configurada.
