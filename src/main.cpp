@@ -2203,7 +2203,7 @@ private:
                     else if (cp >= 32 && cp < 127) out << static_cast<char>(cp);
                     else if (cp <= 0xFF) out << "\\x" << std::hex << std::setw(2) << std::setfill('0') << cp << std::dec;
                     else if (cp <= 0xFFFF) out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << cp << std::dec;
-                    else out << "\\\\U" << std::hex << std::setw(8) << std::setfill('0') << cp << std::dec;
+                    else out << "\\U" << std::hex << std::setw(8) << std::setfill('0') << cp << std::dec;
                     i += width;
                 }
                 out << "'";
