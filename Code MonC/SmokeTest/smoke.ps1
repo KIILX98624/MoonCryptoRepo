@@ -22,6 +22,19 @@ if ($crypto -ne "sha-84cfbae28e7ce7e83d00e8ff8b4278c2385dbeecf7149b89287d94f8dfd
 $bytes = (& $binary run "$PSScriptRoot\fixtures\bytes.monc" | Out-String).Trim()
 if ($bytes -notmatch "byte-0=1" -or $bytes -notmatch "byte-2=255") { throw "Bytes falhou: $bytes" }
 
+$cInterop = (& $binary run "$PSScriptRoot\fixtures\c_interop.monc" | Out-String).Trim()
+$expectedCInteropPrefix = @("sqrt=5", "pow=32", "sin=0", "abs=17", "atoi=123") -join [Environment]::NewLine
+if (-not $cInterop.StartsWith($expectedCInteropPrefix)) { throw "C interop falhou no resultado das funções C: $cInterop" }
+$firstRandom = [regex]::Match($cInterop, "rand_first=(\d+)")
+$secondRandom = [regex]::Match($cInterop, "rand_second=(\d+)")
+$differentRandom = [regex]::Match($cInterop, "rand_different_seed=(\d+)")
+if (-not $firstRandom.Success -or -not $secondRandom.Success -or -not $differentRandom.Success -or
+    $firstRandom.Groups[1].Value -ne $secondRandom.Groups[1].Value -or
+    $firstRandom.Groups[1].Value -eq $differentRandom.Groups[1].Value -or
+    $cInterop -notmatch "malloc_free_NULL=ok") {
+    throw "C interop falhou nos testes de rand/srand ou malloc/free: $cInterop"
+}
+
 $builtins = (& $binary run "$PSScriptRoot\fixtures\bytearray_builtins.monc" | Out-String).Trim()
 $expectedBuiltins = @("12,60,42,50", "30", "true", "2", "1", "1,2,12,42,50", "2,12", "1,9,9,42,50", "2", "9,1", "true", "true", "false", "0b1011", "'Ol\xe1'", "0") -join [Environment]::NewLine
 if ($builtins -ne $expectedBuiltins) { throw ("ByteArray/Python built-ins falharam: " + $builtins) }
