@@ -149,4 +149,4 @@ Já adicionados ao runtime nesta branch:
 - Built-ins `all`, `any`, `ascii`, `bin`, `bool` e o placeholder `breakpoint`.
 - Fixture de integração e teste CTest para esse subconjunto.
 
-**Ainda pendente nesta Parte 1:** as demais built-ins da lista de comparação, como conversores genéricos, funções de iteração, introspecção e utilitários. Elas não devem ser consideradas implementadas só porque a primeira leva foi adicionada. A suíte CTest da branch precisa passar nos ambientes Windows e Linux antes de marcar a parte como concluída.
+**Ainda pendente nesta Parte 1:** as demais built-ins da lista de comparação, como conversores genéricos, funções de iteração, introspecção e utilitários. Elas não devem ser consideradas implementadas só porque a primeira leva foi adicionada. A suíte CTest passou no GitHub Actions em Windows e Linux no commit `b2d4c275`. As demais built-ins da lista comparativa continuam pendentes.
