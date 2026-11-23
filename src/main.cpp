@@ -574,6 +574,7 @@ bool value_matches_type(const Value& value, const std::string& type_name) {
     if (type_name == "Char") return value.kind == ValueKind::Char;
     if (type_name == "String" || type_name == "String32" || type_name == "String64") return value.kind == ValueKind::String;
     if (type_name == "Bytes") return value.kind == ValueKind::Bytes;
+    if (type_name == "ByteArray" || type_name == "bytearray") return value.kind == ValueKind::ByteArray;
     if (type_name == "Array" || type_name.rfind("Array<", 0) == 0) {
         if (value.kind != ValueKind::Array || !value.array_val) return false;
         if (type_name.rfind("Array<", 0) == 0 && type_name.back() == '>') {
@@ -2775,6 +2776,54 @@ private:
             ++position_;
         }
         const std::string name = source_.substr(start, position_ - start);
+        whitespace();
+        if (position_ < source_.size() && source_[position_] == '[') {
+            const auto variable = variables_.find(name);
+            if (variable == variables_.end() || variable->second.kind != ValueKind::ByteArray || !variable->second.bytearray_val) {
+                position_ = saved_pos;
+                return false;
+            }
+            ++position_;
+            const std::size_t index_start = position_;
+            int depth = 1;
+            while (position_ < source_.size() && depth > 0) {
+                if (source_[position_] == '[') ++depth;
+                else if (source_[position_] == ']') --depth;
+                if (depth > 0) ++position_;
+            }
+            if (depth != 0) return fail("unterminated bytearray index assignment");
+            const std::string index_text = source_.substr(index_start, position_ - index_start);
+            ++position_;
+            whitespace();
+            if (position_ >= source_.size() || source_[position_] != '=') { position_ = saved_pos; return false; }
+            ++position_;
+            const std::size_t value_start = position_;
+            while (position_ < source_.size() && source_[position_] != ';') ++position_;
+            if (position_ >= source_.size()) return fail("unterminated bytearray index assignment");
+            const std::string value_text = source_.substr(value_start, position_ - value_start);
+            ++position_;
+            if (active) {
+                auto indices = parse_argument_list(index_text);
+                auto values = parse_argument_list(value_text);
+                if (indices.empty() || indices.size() != values.size()) return fail("bytearray index/value count mismatch");
+                std::vector<std::size_t> positions;
+                long long previous = -1;
+                for (const auto& index : indices) {
+                    if (index.kind != ValueKind::Integer || index.int_val < 0 ||
+                        static_cast<std::size_t>(index.int_val) >= variable->second.bytearray_val->size() ||
+                        index.int_val <= previous) return fail("bytearray indices must be valid, ascending and unique");
+                    previous = index.int_val;
+                    positions.push_back(static_cast<std::size_t>(index.int_val));
+                }
+                for (std::size_t i = 0; i < values.size(); ++i) {
+                    if (values[i].kind != ValueKind::Integer || values[i].int_val < 0 || values[i].int_val > 255)
+                        return fail("bytearray values must be integers between 0 and 255");
+                }
+                for (std::size_t i = 0; i < positions.size(); ++i)
+                    (*variable->second.bytearray_val)[positions[i]] = static_cast<unsigned char>(values[i].int_val);
+            }
+            return true;
+        }
         if (constants_.find(name) != constants_.end()) {
             return fail("cannot assign to const variable '" + name + "'");
         }
