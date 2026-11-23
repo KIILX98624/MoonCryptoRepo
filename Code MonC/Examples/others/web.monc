@@ -1,0 +1,9 @@
+use crypto
+
+fn main[] -> Int32 {
+    const nome: String32 = "Lua";
+    print["Olá, " + nome + "!"];
+    print[crypto.sha256[nome]];// mesma coisa que que o com .hex[]
+    print[crypto.sha256[nome].hex[]];
+    return 0;
+}
