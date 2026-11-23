@@ -1589,8 +1589,10 @@ private:
         const auto method_variable = variables_.find(method_object);
         const bool bytearray_method_call = method_dot != std::string::npos &&
             method_variable != variables_.end() && method_variable->second.kind == ValueKind::ByteArray;
+        const bool native_builtin_call = name == "all" || name == "any" || name == "ascii" ||
+            name == "bin" || name == "bool" || name == "breakpoint" || name == "bytearray";
         const bool c_external_call = c_functions_.find(name) != c_functions_.end();
-        if (functions_.find(name) == functions_.end() && !native_json_call && !bytearray_method_call && !c_external_call) {
+        if (functions_.find(name) == functions_.end() && !native_json_call && !bytearray_method_call && !native_builtin_call && !c_external_call) {
             position_ = saved_pos;
             return false;
         }
@@ -1628,9 +1630,9 @@ private:
                 auto args = parse_argument_list(arg_content);
                 auto result = call_c_function(name, args);
                 if (!result) return false;
-            } else if (native_json_call || bytearray_method_call) {
+            } else if (native_json_call || bytearray_method_call || native_builtin_call) {
                 auto result = evaluate_expression(name + "[" + arg_content + "]");
-                if (!result) return fail("invalid native method call '" + name + "'");
+                if (!result) return fail("invalid native function or method call '" + name + "'");
             } else {
                 auto args = parse_argument_list(arg_content);
                 auto res = call_function(name, args);
