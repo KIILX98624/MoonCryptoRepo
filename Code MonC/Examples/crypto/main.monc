@@ -1,4 +1,8 @@
+// Example: Demonstrates hashing a text value with SHA-256 and printing both the input and digest.
+
 use crypto
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let texto: String32 = "Gustavo";
