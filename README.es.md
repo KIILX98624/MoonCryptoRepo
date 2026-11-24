@@ -349,8 +349,8 @@ Algunos archivos son experimentos o demostraciones de diseño y pueden utilizar 
 
 ## Documentación
 
-- [Guía para principiantes](MDs/GUIA_INICIANTE.md)
-- [Guía técnica avanzada](MDs/GUIA_AVANCADO.md)
+- [Guía para principiantes (PT-BR)](MDs/GUIA_INICIANTE.md)
+- [Guía técnica avanzada (PT-BR)](MDs/GUIA_AVANCADO.md)
 - [Especificación del lenguaje](MDs/MOONLANGUAGE.md)
 - [Interoperabilidad con C](MDs/C_INTEROP.md)
 - [Hoja de ruta del proyecto](MDs/ROADMAP_MOONCRYPTO.md)
