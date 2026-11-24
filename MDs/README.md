@@ -2,6 +2,11 @@
 
 > A especificação atual de sintaxe, tipos, EBNF, imports, overflow, bytes, erros e ownership está em [MOONLANGUAGE.md](MOONLANGUAGE.md).
 
+## Guias de uso
+
+- [Guia para iniciantes](GUIA_INICIANTE.md): primeiros programas, variáveis, tipos e funções com exemplos.
+- [Guia técnico avançado](GUIA_AVANCADO.md): arquitetura do runtime, representação de valores, assinaturas e limitações internas.
+
 > **Sintaxe atual:** chamadas usam colchetes: `print[texto]`, `somar[1, 2]` e `crypto.sha256[texto]`. Parênteses para chamadas são sintaxe desatualizada e geram erro.
 
 **Status:** protótipo interpretado funcional em evolução. O runtime já executa um subconjunto da linguagem MonC, inclui módulos nativos e interoperabilidade inicial com `math.h` e `stdlib.h`. Geração de executáveis nativos e verificação de ownership pelo compilador continuam em desenvolvimento.
