@@ -76,4 +76,4 @@ fn lcm[a: Int32, b: Int32] -> Int32 {
     return (a * b) / gcd[a, b]
 }
 
-// só coloquei aqui pra poder mandar outro commit skskks
+// This file also serves as a separate example of reusable math functions.
