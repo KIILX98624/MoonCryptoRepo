@@ -25,4 +25,4 @@ fn main[] -> Int32 {
     return 0;
 }
 
-//ok
+// End of the loop and switch demonstration.
