@@ -1,4 +1,8 @@
+// Example: Demonstrates importing a function from another MonC file and storing its return value.
+
 ﻿#external "fnmath"
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let somaResult: Int32 = somar[10, 20];
