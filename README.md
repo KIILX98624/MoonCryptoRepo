@@ -349,6 +349,10 @@ Some files are experiments or design demonstrations and may use syntax that is n
 └── CMakeLists.txt               # CMake build configuration
 ```
 
+## Android (Termux)
+
+A native Termux build guide is available in [ANDROID_TERMUX.md](ANDROID_TERMUX.md). It uses the stable `main` codebase and builds the interpreter directly on Android.
+
 ## Documentation
 
 - [Beginner's guide (PT-BR)](MDs/GUIA_INICIANTE.md)
