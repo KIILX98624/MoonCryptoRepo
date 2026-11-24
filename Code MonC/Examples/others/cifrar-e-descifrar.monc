@@ -14,4 +14,4 @@ fn main[] -> Int32 {
     return 0;
 }
 
-//Configurar API no compilador
+// Configure the API in the compiler.
