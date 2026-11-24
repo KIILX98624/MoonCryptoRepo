@@ -3,55 +3,55 @@
 // Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
-    // Criação
+    // Construction
     let dados = bytearray[Array[10, 20, 30]];
     let extras = Array[40, 50, 60];
 
-    // Acesso e atribuição
+    // Access and assignment
     print[dados[0]];
     dados[0] = 15;
     dados[0, 1, 2] = 10, 20, 30;
     print[dados[]];
     print[dados.length];
 
-    // Adicionar e remover
+    // Adding and removing bytes
     dados.append[70, 80];
     let removido = dados.pop[0];
     dados.vpop[50];
     print[removido];
 
-    // Modificar valores
+    // Modifying values
     dados.insert[0, +5];
     dados.insert[1, -2];
     dados.insert[2, *3];
     dados.insert[3, 99];
 
-    // Consultas
+    // Query operations
     print[dados.contains[99]];
     print[dados.index[99]];
     print[dados.count[20]];
 
-    // Extensão
+    // Extending the array
     dados.extend[extras];
     dados.extend[true, Array[1, 2, 3]];
 
-    // Recorte e preenchimento
+    // Slicing and filling
     let recorte = dados.slice[1, 3];
     print[recorte[]];
 
     dados.fill[9, 1, 3];
 
-    // Cópia e inversão
+    // Copying and reversing
     let copia = dados.copy[];
     copia.reverse[];
     print[copia[]];
 
-    // Limpeza
+    // Clearing the array
     dados.clear[2];
     print[dados.length];
     dados.clear[];
 
-    // Built-ins
+    // Built-in functions
     print[all[Array[true, true, true]]];
     print[any[Array[false, true, false]]];
     print[bool[0]];
