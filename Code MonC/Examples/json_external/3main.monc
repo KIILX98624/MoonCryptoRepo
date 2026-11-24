@@ -1,4 +1,8 @@
+// Example: Demonstrates reading JSON data from a file, retrieving fields, and writing the JSON value to another file.
+
 #external json
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     // Le o arquivo JSON produzido pelo programa Python.
