@@ -1,4 +1,8 @@
+// Example: Demonstrates importing a math module and calling its exported functions.
+
 #external "mathmodulo"
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let s: Int32 = sum[15, 25];
