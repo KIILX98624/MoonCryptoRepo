@@ -1,4 +1,8 @@
+// Example: Demonstrates calculating a SHA-256 digest and displaying it as hexadecimal text.
+
 use crypto
+
+// Runs the example and demonstrates the feature described above.
 
 fn main[] -> Int32 {
     let texto: String32 = "MoonCrypto";
