@@ -1,4 +1,8 @@
+// Example: Preserves an early design example for encryption and decryption; the APIs shown here are not currently implemented.
+
 use crypto
+
+// Runs the example and demonstrates the feature described above.
 
 fn main[] -> Int32 {
     let chave = crypto.key_from("senha-forte", 32);
