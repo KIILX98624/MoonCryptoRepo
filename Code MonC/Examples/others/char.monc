@@ -7,4 +7,4 @@ fn main[] -> Int32 {
     print[letra];
     return 0;
 }
-//ok
+// End of the character example.
