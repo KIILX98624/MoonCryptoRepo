@@ -1,3 +1,7 @@
+// Example: Demonstrates declaring and printing a Char value.
+
+// Runs the example and demonstrates the feature described above.
+
 fn main[] -> Int32 {
     let letra: Char = 'A'; 
     print[letra];
