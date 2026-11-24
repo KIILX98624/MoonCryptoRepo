@@ -1,10 +1,18 @@
+// Example: Defines reusable arithmetic and greeting functions for the functions module examples.
+
+// Adds two Int32 values and returns their sum.
+
 fn somar[a: Int32, b: Int32] -> Int32 {
     return a + b;
 }
 
+// Multiplies two Int32 values and returns the product.
+
 fn multiplicar[a: Int32, b: Int32] -> Int32 {
     return a * b;
 }
+
+// Prints a greeting that includes the supplied name.
 
 fn saudar[nome: String32] -> Int32 {
     print["Olá, " + nome + "! Módulo externo carregado com sucesso."];
