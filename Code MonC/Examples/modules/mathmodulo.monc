@@ -1,10 +1,10 @@
 // Example: Provides reusable arithmetic and number-property functions for the module example.
 
 // ==========================================
-// Módulo de Matemática MoonCrypto (math.mncyt)
+// MoonCrypto mathematics module (math.mncyt)
 // ==========================================
 
-// --- Operações Aritméticas Básicas ---
+// --- Basic arithmetic operations ---
 
 // Adds two integers and returns the result.
 
@@ -54,7 +54,7 @@ fn power[base: Int32, exp: Int32] -> Int32 {
     return res;
 }
 
-// --- Funções Clássicas e Teoria dos Números ---
+// --- Classic functions and number theory ---
 
 // Calculates the factorial of a non-negative integer recursively.
 
@@ -100,7 +100,7 @@ fn lcm[num1: Int32, num2: Int32] -> Int32 {
     return (num1 * num2) / divisor;
 }
 
-// --- Predicados e Testes Numéricos (1 = Verdadeiro, 0 = Falso) ---
+// --- Number predicates and tests (1 = true, 0 = false) ---
 
 // Returns 1 when the number is even, or 0 otherwise.
 
@@ -189,14 +189,14 @@ fn is_armstrong[num: Int32] -> Int32 {
     if (num < 0) {
         return 0;
     }
-    // Contar dígitos
+    // Count the number of digits.
     let digits: Int32 = 0;
     let temp: Int32 = num;
     while [temp > 0] {
         digits = digits + 1;
         temp = temp / 10;
     }
-    // Somar dígitos elevados à quantidade de dígitos
+    // Add each digit raised to the number of digits.
     let sum: Int32 = 0;
     temp = num;
     while [temp > 0] {
