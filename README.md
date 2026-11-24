@@ -1,265 +1,291 @@
-# MonC — Linguagem de programação v1.0.0
+# MonC
 
-> A especificação atual de sintaxe, tipos, EBNF, imports, overflow, bytes, erros e ownership está em [MOONLANGUAGE.md](MOONLANGUAGE.md).
+**MonC is an experimental programming language with a C++20-based interpreter/runtime.** Its syntax uses typed functions, square-bracket calls, modules, and a growing set of built-in data structures. The project is being developed with a focus on clear syntax, native-library interoperability, and memory-safety ideas.
 
-> **Sintaxe atual:** chamadas usam colchetes: `print[texto]`, `somar[1, 2]` e `crypto.sha256[texto]`. Parênteses para chamadas são sintaxe desatualizada e geram erro.
+> **Project status:** MonC is currently an evolving interpreted prototype. The repository contains a C++20 runtime that parses and executes a supported subset of `.monc` files. It is **not yet a native-code compiler**. Native compilation, compiler-enforced ownership, and several planned language features are still under development.
 
-**Status:** protótipo interpretado funcional em evolução. O runtime já executa um subconjunto da linguagem MonC, inclui módulos nativos e interoperabilidade inicial com `math.h` e `stdlib.h`. Geração de executáveis nativos e verificação de ownership pelo compilador continuam em desenvolvimento.
+[English](README.md) · [Português (Brasil)](README_PT-BR.md) · [Español](README.es.md)
 
-> **Estado do repositório:** protótipo nativo em C++20. `monc` resolve o arquivo de entrada e `monc` interpreta o subconjunto validado da linguagem `.monc`; o comando `monc run caminho\\para\\main.monc` é a interface recomendada.
+## Contents
 
-### VS Code
+- [What MonC looks like](#what-monc-looks-like)
+- [Current capabilities](#current-capabilities)
+- [Quick start](#quick-start)
+- [Build from source](#build-from-source)
+- [Run a program](#run-a-program)
+- [Language basics](#language-basics)
+- [Built-in modules](#built-in-modules)
+- [C interoperability](#c-interoperability)
+- [Examples and tests](#examples-and-tests)
+- [Project structure](#project-structure)
+- [Documentation](#documentation)
+- [Current limitations](#current-limitations)
 
-O suporte inicial ao editor fica em [`editors/vscode`](editors/vscode/README.md). A extensão empacotada `editors/vscode/mooncrypto-language-1.5.4.vsix` (mais atual) pode ser instalada com `code --install-extension .\\editors\\vscode\\mooncrypto-language-1.5.4.vsix --force`. Ela adiciona realce de sintaxe, comentários, pares de colchetes e snippets para arquivos `.monc`. É suporte de edição; não oferece ainda diagnósticos do compilador.
+## What MonC looks like
 
-### Compilar o protótipo
+A small MonC program:
 
-Com um compilador C++20 disponível:
+```monc
+// The main function is the entry point of this program.
+fn main[] -> Int32 {
+    // Declare an integer variable.
+    let first: Int32 = 20;
+    let second: Int32 = 22;
+
+    // Call the built-in print function and display the result.
+    print["The answer is: " + (first + second)];
+
+    // Return the process exit code.
+    return 0;
+}
+```
+
+A notable syntax rule is that **MonC function calls use square brackets**:
+
+```monc
+sum[10, 20];
+print["Hello, MonC!"];
+crypto.sha256["message"];
+```
+
+C functions declared through `playCodeC` use the C calling syntax with parentheses. See [C interoperability](#c-interoperability).
+
+## Current capabilities
+
+The following table describes the prototype, not the long-term language design.
+
+| Feature | Current status |
+|---|---|
+| Typed functions and `main` entry point | Implemented in the interpreter |
+| Local variables with `let` and constants with `const` | Implemented |
+| Integer and string types, characters, booleans | Implemented to varying extents; see the language specification |
+| `if`, `else`, `while`, `for`, `switch`, `continue` | Implemented to the extent covered by the examples and tests |
+| User-defined functions and `#external` source modules | Implemented |
+| Native JSON module | Implemented |
+| `Bytes`, cryptographic hashes, HMAC, random bytes | Implemented in the current runtime, with platform-specific backends |
+| Mutable `ByteArray` and its documented methods | Implemented in the current development branch |
+| Selected C functions from `math.h` and `stdlib.h` | Initial interoperability implemented |
+| Native executable generation | Planned, not implemented |
+| Compiler-checked ownership and borrowing | Planned, not implemented |
+| Complete Python built-in compatibility | Not a goal of the current prototype; only a small selected subset is implemented |
+
+Feature details and exact limitations can change as the runtime evolves. The [language specification](MDs/MOONLANGUAGE.md) and [C interoperability notes](MDs/C_INTEROP.md) are the more detailed references.
+
+## Quick start
+
+### Requirements
+
+- CMake 3.20 or newer.
+- A C++20 compiler.
+- On Windows, a supported MinGW-w64/MSYS2 toolchain or another compatible C++20 toolchain.
+- On Linux, a C++20 compiler and the system development libraries required by the project.
+- OpenSSL development files are optional on non-Windows systems. When available, CMake enables the OpenSSL crypto backend.
+
+Check that the tools are available:
 
 ```sh
-g++ -std=c++20 -Wall -Wextra -Wpedantic -Isrc src/main.cpp src/project.cpp src/lexer.cpp src/ast.cpp -o monc
-./monc run caminho/para/main.monc
+cmake --version
+g++ --version
 ```
 
-No Windows, use `monc.exe run caminho\\para\\main.monc`.
+### Build from source
 
-### Comando global `monc`
+Run these commands from the repository root:
 
-Use o nome real do arquivo, sem escrever os símbolos `<` e `>`:
+```sh
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+The executable is normally located at:
+
+- Windows: `build/Release/monc.exe` or `build/monc.exe`, depending on the generator.
+- Linux: `build/monc`.
+
+### Run a program
+
+Pass a source file to the interpreter:
+
+```sh
+./build/monc run "Code MonC/Examples/others/if_else.monc"
+```
+
+On Windows, for example:
 
 ```powershell
-monc run caminho\para\programa.monc 
+.\build\Release\monc.exe run "Code MonC\Examples\others\if_else.monc"
 ```
 
-O binário deve estar em `C:\Program Files\MonC\monc.exe`, e essa pasta foi adicionada ao PATH do usuário. Abra um novo terminal para o comando `monc` ser reconhecido. Nesta fase, o comando executa o subconjunto interpretado da linguagem; a geração de executáveis nativos será adicionada posteriormente.
+The exact executable path depends on the CMake generator. You can also add the executable's directory to your `PATH` to call `monc` from another folder.
 
-O executável configura a saída do console do Windows como UTF-8, permitindo imprimir caracteres como `é` corretamente.
+### Run the automated tests
 
-### `if` e `else` no protótipo
-
-O interpretador inicial aceita condições booleanas (`true` e `false`) e comparações inteiras (`==`, `!=`, `<`, `>`, `<=`, `>=`):
-
-```cpp
-fn main[] -> Int32 {
-    if (2 > 1) {
-        print["condição verdadeira"];
-    } else {
-        print["condição falsa"];
-    }
-    return 0;
-}
+```sh
+ctest --test-dir build -C Release --output-on-failure
 ```
 
-Teste o exemplo com:
+On Windows, the repository also contains a PowerShell smoke-test script that compiles the runtime with MinGW and exercises the example fixtures:
 
 ```powershell
-.\monc.exe run Examples\Others\if_else.monc 
+.\Code\MonC\SmokeTest\smoke.ps1
 ```
 
-O resultado deve ser `if funcionou`. A implementação ainda é experimental e aceita apenas declarações `let` com valores inteiros e comparações simples.
+Run the script from the repository root in a PowerShell environment with the required compiler available.
 
-### Variáveis e tipos no protótipo
+## Language basics
 
-O interpretador aceita variáveis locais com `let`, reatribuições e comparações. Os tipos suportados incluem:
-- Inteiros (`Int32`, `Int64`, etc.)
-- Textos (`String32`, `String64`, `String`)
-- Caracteres (`Char` com aspas simples, ex: `'A'`)
+### Functions and variables
 
-```cpp
-fn main[] -> Int32 {
-    let titulo: String32 = "MonC";
-    let descricao: String64 = "Linguagem nativa com foco em segurança";
-    let letra: Char = 'M';
-    let a: Int32 = 10;
+Functions declare parameters inside square brackets and specify a return type after `->`:
 
-    print["Nome: " + titulo + " | Letra: " + letra];
-    print[descricao];
-
-    if (a >= 5) {
-        print["a é maior ou igual a 5"];
-    }
-
-    return 0;
-}
-```
-
-O comando `print[...]` permite imprimir literais, variáveis diretamente (`print[titulo];`), concatenações de textos e números (`print["Valor: " + a];`) e caracteres.
-
-Tipos inteiros com largura fixa validam sua faixa no interpretador: por exemplo, `UInt8` aceita apenas valores de `0` a `255`, e conversões que excedam a faixa produzem erro.
-
-### Sintaxe de laços
-
-Para manter a linguagem distinta de C++, os laços usam colchetes na declaração da condição:
-
-```cpp
-while [condição] {
-    print["executando enquanto a condição for verdadeira"];
-}
-
-for [let i: Int32 = 0; i < 5; i = i + 1] {
-    print["repetição"];
-}
-```
-
-O interpretador executa o formato `for` inteiro mostrado acima e laços `while [condição]` com condições booleanas e comparações inteiras, além de suportar reatribuições de variáveis locais.
-
-Teste o exemplo de `while` com:
-
-```powershell
-.\monc.exe run Examples\Others\while.monc 
-```
-
-### Módulos e Funções com `#external`
-
-O interpretador permite criar funções reutilizáveis (`fn nome[params] -> Retorno { ... }`) e dividir o código em múltiplos arquivos `.monc` usando a diretiva `#external` ou `use`:
-
-```cpp
-// matematica.monc
-fn somar[a: Int32, b: Int32] -> Int32 {
+```monc
+// Add two integers and return their sum.
+fn add[a: Int32, b: Int32] -> Int32 {
     return a + b;
 }
 
-fn saudar[nome: String32] -> Int32 {
-    print["Olá, " + nome + "!"];
-    return 0;
-}
-
-// main.monc
-#external "matematica"
-
 fn main[] -> Int32 {
-    saudar["MonC"];
-    let s: Int32 = somar[15, 25];
-    print["Soma: " + s];
+    // Create a variable whose type is explicitly declared.
+    let result: Int32 = add[12, 30];
+
+    // Display the calculated value.
+    print[result];
     return 0;
 }
 ```
 
-Teste o exemplo de módulos com:
+A variable's type can sometimes be inferred:
 
-```powershell
-monc examples\modules\main.monc 
+```monc
+let message = "Hello";
+let values = Array[1, 2, 3];
 ```
 
+### Conditions and loops
 
-### Módulo JSON nativo
+```monc
+fn main[] -> Int32 {
+    let count: Int32 = 0;
 
-O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e não exige arquivo `.monc` separado nem dependência externa.
+    // Repeat while count is less than three.
+    while [count < 3] {
+        print[count];
+        count = count + 1;
+    }
+
+    // Select a branch based on a condition.
+    if (count == 3) {
+        print["Finished"];
+    } else {
+        print["Not finished"];
+    }
+
+    return 0;
+}
+```
+
+### Arrays
+
+The current runtime includes an `Array` type and array operations. The following example uses the array module API:
+
+```monc
+fn main[] -> Int32 {
+    // Create an array containing three integers.
+    let numbers: Array<Int32> = Array[10, 20, 30];
+
+    // Append a value to the end of the array.
+    array.push[numbers, 40];
+
+    // Read an item by its zero-based index.
+    print[array.get[numbers, 0]];
+
+    // Print the number of items in the array.
+    print[array.length[numbers]];
+
+    return 0;
+}
+```
+
+### ByteArray
+
+`ByteArray` is a mutable sequence of byte values (0 through 255). It is distinct from the immutable or value-oriented `Bytes` type used for binary and cryptographic data.
+
+```monc
+fn main[] -> Int32 {
+    // Create a mutable byte array from an Array.
+    let data = bytearray[Array[10, 20, 30]];
+
+    // Change the byte at index zero.
+    data[0] = 15;
+
+    // Append two bytes to the end.
+    data.append[40, 50];
+
+    // Read the current number of bytes.
+    print[data.length];
+
+    // Print all byte values.
+    print[data[]];
+
+    return 0;
+}
+```
+
+The current branch also implements methods such as `pop`, `vpop`, `insert`, `clear`, `copy`, `reverse`, `contains`, `index`, `count`, `extend`, `slice`, and `fill`. Their exact argument rules are documented in [MOONLANGUAGE.md](MDs/MOONLANGUAGE.md).
+
+## Built-in modules
+
+### JSON
+
+The built-in JSON module parses, creates, reads, writes, and serializes JSON values:
 
 ```monc
 #external "json"
 
 fn main[] -> Int32 {
-    let documento: JsonValue = json.parse["{\"nome\":\"MonC\",\"versao\":2,\"ativo\":true}"];
-    let nome: String32 = json.get[documento, "nome"].as_string[];
-    let versao: Int32 = json.get[documento, "versao"].as_int[];
+    // Parse JSON text into a JsonValue.
+    let document: JsonValue = json.parse["{\"name\":\"MonC\",\"version\":2}"];
 
-    print["Nome: " + nome];
-    print["Versão: " + versao];
-    print[json.stringify[documento]];
+    // Retrieve fields and convert them to their expected MonC types.
+    let name: String32 = json.get[document, "name"].as_string[];
+    let version: Int32 = json.get[document, "version"].as_int[];
+
+    // Display the extracted values.
+    print["Name: " + name];
+    print["Version: " + version];
+
     return 0;
 }
 ```
 
-Funções disponíveis:
+See the JSON examples under `Code MonC/Examples/json_external` for more operations.
 
-| Função | Descrição |
-|---|---|
-| `json.parse[texto]` | Analisa uma string JSON e retorna `JsonValue`. |
-| `json.stringify[valor]` | Serializa `JsonValue` em JSON compacto válido. |
-| `json.read[caminho]` | Lê e analisa um arquivo JSON. |
-| `json.write[caminho, valor]` | Grava um `JsonValue` em arquivo. |
-| `json.get[objeto, chave]` | Obtém uma propriedade; para arrays, recebe um índice inteiro. |
-| `json.has[objeto, chave]` | Verifica se uma propriedade existe. |
-| `json.type[valor]` | Retorna `null`, `boolean`, `number`, `string`, `array` ou `object`. |
-| `json.length[valor]` | Retorna o tamanho de array, objeto ou string. |
-| `json.new_object[]` / `json.new_array[]` | Cria um objeto ou array vazio. |
-| `json.null[]` | Cria o valor JSON `null`. |
-| `json.from_string[texto]` | Converte uma string MonC em valor JSON string. |
-| `json.from_int[numero]` | Converte um inteiro em valor JSON number. |
-| `json.from_bool[bool]` | Converte um booleano em valor JSON boolean. |
-| `json.set[objeto, chave, valor]` | Define ou substitui uma propriedade de objeto. |
-| `json.push[array, valor]` | Adiciona um valor ao final de um array. |
+### Cryptography
 
-Os valores retornados por `json.get` podem ser convertidos com `.as_string[]`, `.as_int[]` e `.as_bool[]`. Essas conversões falham quando o tipo JSON não corresponde ao tipo solicitado. `json.set` e `json.push` modificam o objeto/array compartilhado e retornam `Bool`.
-
-O parser aceita os tipos JSON padrão, escapes de string, escapes Unicode `\\uXXXX`, números inteiros e decimais, arrays e objetos aninhados. A profundidade máxima é 128 níveis e strings de entrada/arquivos têm limite de 8 MiB. A serialização é compacta; a ordem das propriedades de objetos é ordenada pelas chaves. Erros de parsing ou de arquivo fazem a expressão falhar no interpretador.
-
-
-### Criptografia com `use crypto`
-
-MonC terá um módulo criptográfico oficial. A sintaxe proposta é:
+The runtime currently provides SHA-256, HMAC-SHA-256, and secure random-byte generation through its crypto functionality. For example:
 
 ```monc
 use crypto
 
 fn main[] -> Int32 {
-    let texto: String32 = "MonC";
-    let h = crypto.sha256[texto];
-    print["SHA-256: " + h.hex[]];
+    // Store the text that will be hashed.
+    let message: String32 = "MonC";
+
+    // Calculate the SHA-256 digest.
+    let digest = crypto.sha256[message];
+
+    // Convert the digest to hexadecimal text and display it.
+    print["SHA-256: " + digest.hex[]];
+
     return 0;
 }
 ```
 
-Para cifragem, a API deve usar criptografia autenticada:
+Do not treat planned encryption APIs as available merely because they appear in older design examples. Check the current source and specification before relying on a cryptographic operation.
 
-```monc
-use crypto
+## C interoperability
 
-fn main[] -> Int32 {
-    let chave = crypto.key_from["senha-forte", 32];
-    let cifrado = crypto.aes_encrypt["segredo", chave];
-    print["Cifrado: " + cifrado.hex[]];
-    let original = crypto.aes_decrypt[cifrado, chave];
-    print["Decifrado: " + original];
-    return 0;
-}
-```
-
-`crypto.sha256` já está disponível no interpretador Windows e usa BCrypt; em Linux/macOS, o CMake usa OpenSSL EVP quando disponível. `crypto.key_from` e `crypto.aes_encrypt`/`crypto.aes_decrypt` continuam planejadas e deverão usar derivação de chave adequada e um modo AEAD como AES-GCM. Não será implementado um algoritmo criptográfico próprio.
-
-Bytes aleatórios seguros podem ser gerados com `crypto.random_bytes[n]`; o tamanho máximo de uma chamada é 1 MiB.
-
-Autenticação de mensagens usa `crypto.hmac_sha256[dados, chave]`, retornando um digest `Hash256`.
-
-O interpretador também possui um modelo inicial de erro explícito com `Result`:
-
-```monc
-let resposta: Result = ok[42];
-if (resposta.is_ok[]) {
-    print[resposta.unwrap[]];
-}
-```
-
-Comportamento implementado: prioriza `main.monc` na raiz; caso não exista, procura arquivos `.monc` com `init` no nome na raiz e em `src/`. A busca não é recursiva. Nenhum candidato gera erro, e múltiplos candidatos são listados como ambiguidade.
-
-## Comandos disponíveis no protótipo
-
-Com o executável `monc` compilado e acessível no PATH:
-
-| Comando | Função |
-|---|---|
-| `monc run caminho/para/arquivo.monc` | Executa um arquivo MonC. |
-| `monc run caminho/para/projeto` | Executa um projeto, localizando `main.monc` ou um único arquivo `init*.monc`. |
-| `monc lex caminho/para/arquivo.monc` | Mostra os tokens, com tipo, linha e coluna. |
-| `monc ast caminho/para/arquivo.monc` | Mostra a AST inicial reconhecida pelo parser. |
-
-Para compilar com CMake:
-
-```powershell
-cmake -S . -B build
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
-```
-
-## Interoperabilidade com bibliotecas C
-
-A MonC já possui integração inicial com duas bibliotecas do sistema:
-
-- `math.h`: `sqrt`, `pow` e `sin` já estão declaradas nos exemplos/testes; o runtime aceita assinaturas simples de retorno/parâmetros `float` ou `double`.
-- `stdlib.h`: `abs`, `atoi`, `rand`, `srand`, `malloc`, `free` e `NULL`.
-
-Exemplo de declarações C:
+MonC can declare and call a selected set of native C functions using `#external` and `playCodeC`:
 
 ```monc
 #external "stdlib.h" {
@@ -267,269 +293,78 @@ Exemplo de declarações C:
         int atoi(const char* text);
         int rand(void);
         void srand(unsigned int seed);
-        void* malloc(size_t size);
-        void free(void* ptr);
     }
 }
 
 fn main[] -> Int32 {
-    let numero: Int32 = atoi("123");
+    // Convert decimal text into an integer using the C standard library.
+    let number: Int32 = atoi("123");
+
+    // Set the seed before requesting a pseudo-random value.
     srand(123);
-    let aleatorio: Int32 = rand();
-    let memoria = malloc(64);
-    free(memoria);
-    free(NULL);
-    print[numero];
-    print[aleatorio];
+    let value: Int32 = rand();
+
+    print[number];
+    print[value];
     return 0;
 }
 ```
 
-Ainda não estão disponíveis `atof`, `atol` e `atoll`. A integração aceita apenas as assinaturas documentadas em [C_INTEROP.md](C_INTEROP.md), não a biblioteca C inteira.
+The currently documented integration is limited. It does not mean that the entire C standard library or arbitrary C headers are supported. See [MDs/C_INTEROP.md](MDs/C_INTEROP.md) for supported signatures and restrictions.
 
-## 1. Objetivos
+## Examples and tests
 
-MonC será uma linguagem compilada para código nativo, com sintaxe familiar a quem conhece C++, mas com regras próprias para melhorar segurança e legibilidade.
+Runnable and illustrative programs are stored in:
 
-Prioridades iniciais:
+`Code MonC/Examples/`
 
-1. Portabilidade entre sistemas e arquiteturas populares.
-2. Interoperabilidade com C e C++.
-3. Segurança de memória com ownership verificado pelo compilador.
-4. APIs de criptografia seguras por padrão.
-5. Builds reproduzíveis por meio de versões fixadas de dependências.
+The examples are grouped by topic:
 
-## 2. Execução e compilação
-
-O compilador, provisoriamente chamado `monc`, traduz arquivos `.monc` para código nativo. A proposta é usar LLVM como representação intermediária e deixar a vinculação final a cargo da toolchain da plataforma.
-
-```text
-.monc → análise e verificação → LLVM IR → código objeto → linker → executável
-```
-
-O artefato será um executável nativo do sistema de destino. O compilador deve permitir builds para x64 e ARM64, inicialmente nos sistemas operacionais escolhidos para a primeira versão.
-
-Exemplo de comandos ***planejados***:
-
-```text
-monc build
-monc run
-monc test
-```
-
-**Vantagens:** desempenho nativo, possibilidade de compilação cruzada e acesso ao ecossistema de bibliotecas existente.
-
-**Limitações:** cada plataforma requer toolchain, linker e configuração próprios. Usar LLVM não elimina essas diferenças.
-
-**Decisões pendentes:** sistemas operacionais da primeira versão; versões de LLVM; suporte a compilação cruzada e builds incrementais.
-
-## 3. Sintaxe, tipos e memória
-
-A sintaxe usa blocos com chaves e funções tipadas. `let` declara variáveis e `const`, valores imutáveis. Conversões que possam perder dados devem ser explícitas.
-
-```cpp
-const MAX_RETRIES: UInt32 = 3;
-
-fn main[] -> Int32 {
-    let attempts: UInt32 = 0;
-    print["MonC"];
-    return 0;
-}
-```
-
-A memória seguirá ownership verificado pelo compilador. Cada valor tem um proprietário; empréstimos permitem acesso temporário sem transferir a posse. Referências mutáveis terão regras mais restritas. Operações que não possam ser verificadas pelo compilador, como certos usos de ponteiros, ficarão em blocos `unsafe` explícitos.
-
-```cpp
-fn checksum(data: &Bytes) -> Digest {
-    return crypto.hash.sha256(data);
-}
-
-fn main[] -> Int32 {
-    let data = Bytes.from("MonC");
-    let digest = checksum(&data);
-    print[digest.to_hex[]];
-    return 0;
-}
-```
-
-Tipos opcionais, como `Option<T>`, poderão representar valores ausentes em vez de um `null` universal. A biblioteca padrão deverá distinguir texto (`String`) de bytes (`Bytes`).
-
-**Vantagens:** o compilador pode identificar muitos usos inválidos de memória antes da execução; texto e dados binários não se confundem facilmente.
-
-**Limitações:** ownership influencia a forma de estruturar programas e exige regras claras para referências, mutabilidade e interoperabilidade.
-
-**Decisões pendentes:** genéricos, herança, coleta de memória para tipos específicos e formato exato de referências.
-
-## 4. Funções, módulos e erros
-
-Funções terão parâmetros e retorno tipados. Módulos organizam código e controlam visibilidade. Condicionais e laços usarão palavras-chave familiares, como `if`, `for` e `while`.
-
-O tratamento de erros **não está definido nesta versão**. Duas opções para avaliação posterior:
-
-```cpp
-// Opção A: erros representados no tipo de retorno
-fn read_config() -> Result<Config, FileError> { ... }
-
-// Opção B: exceções
-fn read_config() -> Config { ... }
-```
-
-Também pode ser avaliado um modelo combinado. A decisão afetará chamadas entre módulos, interoperabilidade e a biblioteca padrão, por isso permanecerá aberta na v0.1.
-
-**Decisões pendentes:** `Result`, exceções ou combinação; assincronia; sobrecarga de funções; concorrência.
-
-## 5. Bibliotecas e interoperabilidade
-
-MonC terá módulos próprios e suporte a dependências obtidas por Git. O lockfile deverá registrar revisões exatas para que outra máquina possa reconstruir as mesmas dependências.
-
-```toml
-[dependencies]
-crypto-utils = {
-    git = "https://example.com/crypto-utils",
-    rev = "a1b2c3d"
-}
-```
-
-Para C, o compilador poderá oferecer declarações de funções com ABI C. Para C++, a estratégia inicial será adaptadores escritos em C que exponham interfaces estáveis. A vinculação C++ direta poderá ser avaliada depois, considerando compilador, ABI, sistema operacional e arquitetura.
-
-Isso aproveita bibliotecas populares de C e C++ sem exigir que MonC reproduza detalhes específicos de ABI C++.
-
-**Vantagens:** acesso amplo a bibliotecas existentes e menor acoplamento à ABI de um compilador C++ específico.
-
-**Limitações:** adaptadores podem exigir código adicional; bibliotecas nativas podem precisar de builds e configurações diferentes em cada plataforma.
-
-**Decisões pendentes:** plataformas suportadas na primeira versão; formato do manifesto; comportamento de scripts de build de dependências; políticas de segurança e confiança para dependências Git.
-
-## 6. Criptografia
-
-A linguagem terá uma biblioteca criptográfica oficial. A orientação é reutilizar implementações consolidadas e oferecer APIs de alto nível como caminho padrão. Primitivas de baixo nível ficarão separadas e poderão gerar avisos do linter.
-
-Exemplo ilustrativo:
-
-```cpp
-import crypto.aead;
-import crypto.random;
-
-fn seal(key: SecretKey, message: Bytes) -> Result<SealedData, CryptoError> {
-    let nonce = crypto.random.secure_nonce()?;
-    return crypto.aead.encrypt(key, nonce, message);
-}
-```
-
-A API oficial deverá considerar:
-
-- Tipos distintos para chaves secretas, chaves públicas, nonces, assinaturas e dados cifrados.
-- Geração de aleatoriedade segura fornecida pelo sistema operacional ou pela implementação criptográfica selecionada.
-- Criptografia autenticada como opção padrão para proteger dados.
-- APIs de alto nível para tarefas comuns, com configuração segura por padrão.
-- Avisos contra usos de baixo nível e configurações potencialmente frágeis.
-- Suporte cuidadoso a formatos de serialização e armazenamento de chaves.
-
-A biblioteca escolhida, os algoritmos oferecidos e as garantias de limpeza de memória ainda precisam ser definidos. A linguagem e suas APIs podem reduzir riscos, mas não garantem, por si só, a segurança de um programa.
-
-## 7. Ferramentas planejadas
-
-O ecossistema poderá incluir:
-
-- `monc`: compilador e interface de linha de comando.
-- `monc pkg`: obtenção e fixação de dependências.
-- `monc fmt`: formatador.
-- `monc lint`: avisos sobre código inseguro, conversões e APIs criptográficas de baixo nível.
-- `monc doc`: geração de documentação.
-- `monc test`: execução de testes.
-
-Essas ferramentas são propostas; seus comandos e formatos ainda não foram fechados.
-
-## 8. Projeto e ponto de entrada
-
-Estrutura sugerida:
-
-```text
-wallet/
-├── moon.toml
-├── src/
-│   ├── main.monc
-│   ├── init_crypto.monc
-│   └── wallet.monc
-├── tests/
-└── moon.lock
-```
-
-Regra inicial de localização do ponto de entrada:
-
-1. Procurar `main.monc` na raiz do projeto.
-2. Se não existir, procurar arquivos `.monc` contendo `init` no nome, apenas na raiz e em `src/`.
-3. Se houver exatamente um candidato, usá-lo.
-4. Se houver vários, reportar ambiguidade e listar os caminhos.
-5. Se não houver candidato, informar que falta um ponto de entrada.
-
-A busca não será recursiva nesta versão. A sensibilidade a maiúsculas e minúsculas ainda precisa ser definida. Um campo `entry` no manifesto poderá permitir seleção explícita.
-
-## 9. Decisões abertas para a próxima revisão
-
-1. esses sistemas operacionais devem fazer parte da primeira versão para x64: Windows 10/11.
-2. A busca por `main` deve incluir nomes em qualquer arquivo que termine com `.monc`.
-3. regra de maiúsculas e minúsculas deve ser usada nos nomes de arquivo, por exemplo: `Main.monc` não ira ser igual a `main.monc`.
-4. Para erros iremos introduzir primeiro `Result`, exceções ou algum outro modelo determinado depois.
-6. Há uma biblioteca criptográfica consolidada que iremos adicionar posteriormente para a implementação oficial.
-
-
-## ByteArray e funções built-in (Parte 1)
-
-A branch `feature/part-1-python-builtins-bytearray` introduz o tipo mutável `ByteArray` e as primeiras funções built-in inspiradas no Python.
-
-### Criação e acesso
-
-```monc
-let dados = bytearray[5]; // cinco bytes inicializados com zero
-let outros = bytearray[Array[10, 20, 30]];
-
-dados[0] = 12;
-dados[1, 3] = 40, 50; // índices em ordem crescente
-print[dados[]];       // sequência decimal separada por vírgulas
-print[dados.length];  // propriedade Int32
-```
-
-Cada elemento deve ser um inteiro entre 0 e 255. Leituras e escritas fora dos limites geram erro. A atribuição com vários índices exige índices únicos em ordem estritamente crescente, quantidade igual de valores e posições já existentes. Ela não aumenta automaticamente o tamanho.
-
-### Métodos de ByteArray
-
-| Sintaxe | Comportamento |
+| Folder | Topics |
 |---|---|
-| `dados.append[a, b, ...]` | Adiciona um ou mais bytes ao final. |
-| `dados.pop[indice]` | Remove e retorna o byte naquela posição. Os seguintes avançam uma posição. |
-| `dados.vpop[valor]` | Remove e retorna a primeira ocorrência do valor. Falha se não existir. |
-| `dados.insert[indice, valor]` | Substitui o byte naquela posição. |
-| `dados.insert[indice, +n]` | Soma `n` ao byte existente. |
-| `dados.insert[indice, -n]` | Subtrai `n` do byte existente. |
-| `dados.insert[indice, *n]` | Multiplica o byte existente por `n`. |
-| `dados.clear[]` | Remove todos os bytes. |
-| `dados.clear[indice]` | Remove o byte indicado e todos os seguintes. |
-| `dados.copy[]` | Retorna uma cópia independente. |
-| `dados.reverse[]` | Inverte a sequência no próprio objeto. |
-| `dados.contains[valor]` | Retorna `Bool` indicando se o valor existe. |
-| `dados.index[valor]` | Retorna o índice da primeira ocorrência; falha se não existir. |
-| `dados.count[valor]` | Retorna a quantidade de ocorrências como `Int32`. |
-| `dados.extend[origem]` | Adiciona os bytes de um `Array` ou `ByteArray` ao final. |
-| `dados.extend[true, origem]` | Adiciona os bytes da origem no início. |
-| `dados.slice[inicio, fim]` | Retorna um novo `ByteArray`; início inclusivo e fim exclusivo. |
-| `dados.fill[valor, inicio, fim]` | Preenche o intervalo, com fim exclusivo. |
+| `array` | Array creation and operations |
+| `bytearray` | Mutable byte arrays and built-ins |
+| `crypto` | Hashing and crypto syntax |
+| `externalLib` | C library interoperability |
+| `functions` | User-defined and imported functions |
+| `json_external` | JSON parsing, serialization, and external data |
+| `math` | Mathematical functions |
+| `modules` | Splitting code across MonC files |
+| `others` | Strings, characters, constants, conditions, loops, and other demonstrations |
 
-Os métodos que alteram a sequência retornam `Bool` de sucesso, exceto `pop` e `vpop`, que retornam o byte removido. `insert` limita resultados abaixo de zero a 0 e acima de 255 a 255, emitindo um aviso no terminal. A atribuição de variáveis compartilha o mesmo objeto mutável; `copy[]` cria uma sequência independente.
+Some files are experiments or design demonstrations and may use syntax that is not supported by the current runtime. Prefer the automated fixtures in `Code MonC/SmokeTest/fixtures` when checking behavior guaranteed by the test suite.
 
-### Funções built-in desta etapa
+## Project structure
 
-| Função | Comportamento |
-|---|---|
-| `bool[valor]` | Converte usando as regras de truthiness. |
-| `all[sequencia]` | Retorna verdadeiro se todos os elementos forem truthy; sequência vazia retorna verdadeiro. |
-| `any[sequencia]` | Retorna verdadeiro se algum elemento for truthy; sequência vazia retorna falso. |
-| `bin[numero]` | Retorna a representação binária com prefixo `0b`; valores fracionários são arredondados para o inteiro mais próximo, com meio afastando-se de zero. |
-| `ascii[texto]` | Retorna a representação textual entre aspas, escapando caracteres não ASCII. |
-| `breakpoint[]` | Atualmente é um placeholder sem interrupção do depurador; retorna 0. |
+```text
+.
+├── src/                         # C++20 interpreter and runtime
+├── Code MonC/
+│   ├── Examples/                # MonC example programs
+│   └── SmokeTest/
+│       ├── fixtures/            # Programs used by smoke tests
+│       └── smoke.ps1            # Windows/PowerShell smoke-test runner
+├── MDs/                         # Detailed language and design documentation
+├── editors/vscode/              # VS Code language support
+└── CMakeLists.txt               # CMake build configuration
+```
 
-As regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
+## Documentation
 
-**Validação:** foi adicionado o fixture `Code MonC/SmokeTest/fixtures/bytearray_builtins.monc` e sua chamada à suíte `smoke.ps1`. A suíte CTest passou no GitHub Actions em Ubuntu e Windows (build e testes concluídos com sucesso no commit `b2d4c275`).
+- [Language specification](MDs/MOONLANGUAGE.md)
+- [C interoperability](MDs/C_INTEROP.md)
+- [Project roadmap](MDs/ROADMAP_MOONCRYPTO.md)
+- [VS Code extension](editors/vscode/README.md)
 
-> **Escopo desta etapa:** este commit cobre o `ByteArray` e as built-ins `all`, `any`, `ascii`, `bin`, `bool` e o placeholder `breakpoint`. As demais built-ins da lista comparativa continuam pendentes e serão implementadas após definição de sintaxe e comportamento.
+## Current limitations
+
+MonC is still a prototype. Important limitations include:
+
+- The current executable interprets MonC source; it does not yet generate native executables from `.monc` files.
+- The full language specification and runtime behavior are still evolving.
+- C interoperability supports a limited set of signatures and libraries.
+- General-purpose pointer operations and compiler-enforced memory ownership are not implemented.
+- Some examples are historical experiments and may not run with the current parser.
+- The implemented Python-inspired built-ins are a small subset, not full Python compatibility.
+
+Contributions, bug reports, and focused examples are welcome. Please include the source file, the command used, the expected output, and the actual output when reporting a problem.
