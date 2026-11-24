@@ -1,3 +1,7 @@
+// Example: Demonstrates how to create an Array and use the array module to add, read, update, remove, and clear elements.
+
+// Runs the example and demonstrates the feature described in the file header.
+
 fn main[] -> Int32 {
     let numeros: Array<Int32> = Array[10, 20, 30];
 
