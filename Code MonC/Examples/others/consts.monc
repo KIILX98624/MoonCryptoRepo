@@ -7,4 +7,4 @@ fn main[] -> Int32 {
     print["Nome: " + nome];
     return 0;
 }
-//ok
+// End of the constant example.
