@@ -1,5 +1,7 @@
 # Especificação de linguagem MonC v0.2
 
+> Guias complementares: [Guia para iniciantes](GUIA_INICIANTE.md) · [Guia técnico avançado](GUIA_AVANCADO.md)
+
 ## Decisões semânticas
 
 | Tema | Regra |
