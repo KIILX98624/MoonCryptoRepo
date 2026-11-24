@@ -3,7 +3,7 @@
 // Runs the example and demonstrates the feature described above.
 
 fn main[] -> Int32 {
-    if (1 != 2) {// ou 2 != 2
+    if (1 != 2) {// or 2 != 2
         print["if funcionou"];
     } else {
         print["else funcionou"];
