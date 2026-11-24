@@ -1,4 +1,8 @@
+// Example: Demonstrates declaring a constant, printing a greeting, and hashing text with the crypto module.
+
 use crypto
+
+// Runs the example and demonstrates the feature described above.
 
 fn main[] -> Int32 {
     const nome: String32 = "Lua";
