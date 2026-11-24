@@ -1,4 +1,8 @@
+// Example: Demonstrates the current square-bracket call syntax when using the crypto module.
+
 use crypto
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let texto = "MoonCrypto";
