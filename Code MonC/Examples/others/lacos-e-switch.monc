@@ -1,3 +1,7 @@
+// Example: Demonstrates a for loop, continue, and switch-case selection.
+
+// Runs the example and demonstrates the feature described above.
+
 fn main[] -> Int32 {
     for [let i: Int32 = 0; i < 5; i = i + 1] {
         if (i == 2) {
