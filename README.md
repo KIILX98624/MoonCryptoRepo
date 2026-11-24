@@ -351,8 +351,8 @@ Some files are experiments or design demonstrations and may use syntax that is n
 
 ## Documentation
 
-- [Beginner's guide](MDs/GUIA_INICIANTE.md)
-- [Advanced technical guide](MDs/GUIA_AVANCADO.md)
+- [Beginner's guide (PT-BR)](MDs/GUIA_INICIANTE.md)
+- [Advanced technical guide (PT-BR)](MDs/GUIA_AVANCADO.md)
 - [Language specification](MDs/MOONLANGUAGE.md)
 - [C interoperability](MDs/C_INTEROP.md)
 - [Project roadmap](MDs/ROADMAP_MOONCRYPTO.md)
