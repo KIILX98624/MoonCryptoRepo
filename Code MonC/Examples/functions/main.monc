@@ -1,5 +1,9 @@
+// Example: Demonstrates importing functions from two MonC modules and calling them from main.
+
 #external "fnmath"
 #external "fnrobot"
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
 
