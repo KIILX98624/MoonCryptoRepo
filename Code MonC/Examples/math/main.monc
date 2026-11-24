@@ -1,3 +1,5 @@
+// Example: Demonstrates calling mathematical functions declared from the native C math library.
+
 #external "math.h"{
     playCodeC{
         double sqrt(double x);
@@ -17,6 +19,8 @@
         double trunc(double x);
     }
 }
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let result_sqrt: Double32 = sqrt(8.0);
