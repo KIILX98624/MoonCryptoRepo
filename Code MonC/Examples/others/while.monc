@@ -1,3 +1,7 @@
+// Example: Demonstrates repeating a block with a while loop and updating its counter.
+
+// Runs the example and demonstrates the feature described above.
+
 fn main[] -> Int32 {
     let count: Int32 = 0;
 
