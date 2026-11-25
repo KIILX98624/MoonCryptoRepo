@@ -370,3 +370,8 @@ MonC is still a prototype. Important limitations include:
 - The implemented Python-inspired built-ins are a small subset, not full Python compatibility.
 
 Contributions, bug reports, and focused examples are welcome. Please include the source file, the command used, the expected output, and the actual output when reporting a problem.
+
+
+## Platform-specific build guides
+
+- [Linux Mint build guide](LINUX_MINT.md)
