@@ -1,0 +1,16 @@
+#external "json"
+
+fn main[] -> Int32{
+    let dados: JsonValue = json.read["conversor.json"];
+
+    let n1: JsonValue = json.get[dados, "n1"];
+    let n2: JsonValue = json.get[dados, "n2"];
+
+    print["n1 = " + json.stringify[n1]];
+    print["n2 = " + json.stringify[n2]];
+
+    json.write["data.json", dados];
+
+    print["Arquivo JSON criado com sucesso!"];
+    return 0;
+}

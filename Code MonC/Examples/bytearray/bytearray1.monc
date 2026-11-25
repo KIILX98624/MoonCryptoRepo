@@ -1,6 +1,6 @@
 fn main[] -> Int32 {
     // Criação
-    let dados = bytearray[Array[10, 20, 30]];
+    let dados = bytearray[Array[10, 20, 30, 40]];
     let extras = Array[40, 50, 60];
 
     // Acesso e atribuição
@@ -13,10 +13,11 @@ fn main[] -> Int32 {
     // Adicionar e remover
     dados.append[70, 80];
     let removido = dados.pop[0];
-    dados.vpop[50];
-    print[removido];
+    let removido: UInt8 = dados.vpop[20];
+    print["Removido: " + removido];
 
     // Modificar valores
+    print[dados[]];
     dados.insert[0, +5];
     dados.insert[1, -2];
     dados.insert[2, *3];
