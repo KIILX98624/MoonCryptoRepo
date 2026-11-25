@@ -4,8 +4,35 @@ fn main[] -> Int32 {
     let texto: String32 = "{\"nome\":\"MoonCrypto\",\"versao\":2,\"ativo\":true}";
     let documento: JsonValue = json.parse[texto];
 
-    let nome: String32 = json.get[documento, "nome"].as_string[];
-    let versao: Int32 = json.get[documento, "versao"].as_int[];
+    let nome: String32 = json.get[documento, "nome"].asString[];
+    let versao_json: JsonValue = json.get[documento, "versao"];
+    let versao: Int32 = versao_json.asInt32[];
+    let ativo_json: JsonValue = json.get[documento, "ativo"];
+    let ativo: Bool = ativo_json.asBool[];
+
+    let dados_numericos: JsonValue = json.parse["{\"n1\":123,\"n2\":456,\"decimal\":3.5,\"byte\":255}"];
+    let n1: JsonValue = json.get[dados_numericos, "n1"];
+    let n2: JsonValue = json.get[dados_numericos, "n2"];
+    let decimal_json: JsonValue = json.get[dados_numericos, "decimal"];
+    let byte_json: JsonValue = json.get[dados_numericos, "byte"];
+    let num1: Int32 = n1.asInt32[];
+    let num2: Int32 = n2.asInt32[];
+    let decimal: Float32 = decimal_json.asFloat32[];
+    let byte: UInt8 = byte_json.asUInt8[];
+
+    let bytes = bytearray[Array[0, 1, 127, 255]];
+    let objeto_tipos: JsonValue = json.new_object[];
+    json.set[objeto_tipos, "numero", num1];
+    json.set[objeto_tipos, "bytes", bytes];
+
+    json.write["monc_json_number_test.tmp", num1];
+    let numero_salvo: JsonValue = json.read["monc_json_number_test.tmp"];
+    let numero_recarregado: Int32 = numero_salvo.asInt32[];
+
+    json.write["monc_json_bytes_test.tmp", bytes];
+    let bytes_salvos: JsonValue = json.read["monc_json_bytes_test.tmp"];
+    let ultimo_byte_json: JsonValue = json.get[bytes_salvos, 3];
+    let ultimo_byte: UInt8 = ultimo_byte_json.asUInt8[];
     if (json.has[documento, "ativo"]) {
         print["json-active=true"];
     }
@@ -23,5 +50,10 @@ fn main[] -> Int32 {
     print["json-version=" + versao];
     print["json-array=" + json.stringify[lista]];
     print["json-object=" + json.stringify[objeto]];
+    print["json-typed=" + num1 + "," + num2 + "," + decimal + "," + ativo + "," + byte];
+    print["json-write-int=" + numero_recarregado];
+    print["json-write-bytes=" + json.stringify[bytes_salvos]];
+    print["json-write-object=" + json.stringify[objeto_tipos]];
+    print["json-last-byte=" + ultimo_byte];
     return 0;
 }
