@@ -1,6 +1,10 @@
+// Example: Demonstrates declaring and reading an immutable constant.
+
+// Runs the example and demonstrates the feature described above.
+
 fn main[] -> Int32 {
     const nome: String32 = "Gustavo";
     print["Nome: " + nome];
     return 0;
 }
-//ok
+// End of the constant example.

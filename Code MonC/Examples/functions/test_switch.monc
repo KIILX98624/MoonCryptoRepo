@@ -1,3 +1,7 @@
+// Example: Demonstrates switch statements with integer and string values, including a default branch.
+
+// Runs the example and demonstrates the feature described in the file header.
+
 fn main[] -> Int32 {
     let dia: Int32 = 3;
 

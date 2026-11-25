@@ -1,3 +1,7 @@
+// Example: Defines a simple reusable function that adds two integers.
+
+// Adds two Int32 values and returns their sum.
+
 fn soma[a: Int32, b: Int32] -> Int32 {
     return a + b;
 }

@@ -1,22 +1,36 @@
+// Example: Contains standalone integer arithmetic and number-theory functions used in an external-module experiment.
+
+// Adds two integers and returns the result.
+
 fn sum[a: Int32, b: Int32] -> Int32 {
     return a + b
 }
+
+// Subtracts the second integer from the first.
 
 fn sub[a: Int32, b: Int32] -> Int32 {
     return a - b
 }
 
+// Multiplies two integers and returns the product.
+
 fn mult[a: Int32, b: Int32] -> Int32 {
     return a * b
 }
+
+// Divides the first integer by the second.
 
 fn div[a: Int32, b: Int32] -> Int32 {
     return a / b
 }
 
+// Returns the remainder of integer division.
+
 fn mod[a: Int32, b: Int32] -> Int32 {
     return a % b
 }
+
+// Finds the integer square root by increasing a candidate until its square reaches the input.
 
 fn sqrt[a: Int32] -> Int32 {
     var result: Int32 = 0
@@ -26,6 +40,8 @@ fn sqrt[a: Int32] -> Int32 {
     return result
 }
 
+// Calculates the factorial of a non-negative integer recursively.
+
 fn factorial[n: Int32] -> Int32 {
     if n <= 1 {
         return 1
@@ -33,6 +49,8 @@ fn factorial[n: Int32] -> Int32 {
         return n * factorial[n - 1]
     }
 }
+
+// Returns the Fibonacci number at the requested position using recursion.
 
 fn fibonacci[n: Int32] -> Int32 {
     if n <= 1 {
@@ -42,6 +60,8 @@ fn fibonacci[n: Int32] -> Int32 {
     }
 }
 
+// Calculates the greatest common divisor using the Euclidean algorithm.
+
 fn gcd[a: Int32, b: Int32] -> Int32 {
     if b == 0 {
         return a
@@ -50,8 +70,10 @@ fn gcd[a: Int32, b: Int32] -> Int32 {
     }
 } 
 
+// Calculates the least common multiple using the greatest common divisor.
+
 fn lcm[a: Int32, b: Int32] -> Int32 {
     return (a * b) / gcd[a, b]
 }
 
-// só coloquei aqui pra poder mandar outro commit skskks
+// This file also serves as a separate example of reusable math functions.

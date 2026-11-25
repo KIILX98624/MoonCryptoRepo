@@ -44,9 +44,15 @@ if ($json -notmatch "json-active=true" -or
     $json -notmatch "json-name=MoonCrypto" -or
     $json -notmatch "json-version=2" -or
     $json -notmatch 'json-array=\[7,9\]' -or
-    $json -notmatch 'json-object=\{"lista":\[7,9\],"nome":"MoonCrypto","versao":2\}') {
-    throw "JSON module falhou: $json"
+    $json -notmatch 'json-object=\{"lista":\[7,9\],"nome":"MoonCrypto","versao":2\}' -or
+    $json -notmatch "json-typed=123,456,3.5,true,255" -or
+    $json -notmatch "json-write-int=123" -or
+    $json -notmatch 'json-write-bytes=\[0,1,127,255\]' -or
+    $json -notmatch 'json-write-object=\{"bytes":\[0,1,127,255\],"numero":123\}' -or
+    $json -notmatch "json-last-byte=255") {
+    throw "JSON module/conversões/ByteArray falharam: $json"
 }
+Remove-Item -Force "monc_json_number_test.tmp", "monc_json_bytes_test.tmp" -ErrorAction SilentlyContinue
 
 $float = (& $binary run "$PSScriptRoot\fixtures\float.monc" | Out-String).Trim()
 if ($float -ne "sum=3.75`nscaled=7.5`nexp=25`nfloat-ok") { throw "Float falhou: $float" }

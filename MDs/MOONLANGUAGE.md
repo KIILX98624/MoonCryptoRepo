@@ -1,5 +1,7 @@
 # Especificação de linguagem MonC v0.2
 
+> Guias complementares: [Guia para iniciantes](GUIA_INICIANTE.md) · [Guia técnico avançado](GUIA_AVANCADO.md)
+
 ## Decisões semânticas
 
 | Tema | Regra |
@@ -120,8 +122,9 @@ O interpretador inclui o módulo `json`. Ele é ativado com `#external "json"` e
 
 fn main[] -> Int32 {
     let documento: JsonValue = json.parse["{\"nome\":\"MonC\",\"versao\":2,\"ativo\":true}"];
-    let nome: String32 = json.get[documento, "nome"].as_string[];
-    let versao: Int32 = json.get[documento, "versao"].as_int[];
+    let nome: String32 = json.get[documento, "nome"].asString[];
+    let versao_json: JsonValue = json.get[documento, "versao"];
+    let versao: Int32 = versao_json.asInt32[];
 
     print["Nome: " + nome];
     print["Versão: " + versao];
@@ -137,7 +140,7 @@ Funções disponíveis:
 | `json.parse[texto]` | Analisa uma string JSON e retorna `JsonValue`. |
 | `json.stringify[valor]` | Serializa `JsonValue` em JSON compacto válido. |
 | `json.read[caminho]` | Lê e analisa um arquivo JSON. |
-| `json.write[caminho, valor]` | Grava um `JsonValue` em arquivo. |
+| `json.write[caminho, valor]` | Grava valores MonC compatíveis como JSON, incluindo primitivos, `Array`, `Bytes`, `ByteArray` e `JsonValue`. |
 | `json.get[objeto, chave]` | Obtém uma propriedade; para arrays, recebe um índice inteiro. |
 | `json.has[objeto, chave]` | Verifica se uma propriedade existe. |
 | `json.type[valor]` | Retorna `null`, `boolean`, `number`, `string`, `array` ou `object`. |
@@ -150,7 +153,9 @@ Funções disponíveis:
 | `json.set[objeto, chave, valor]` | Define ou substitui uma propriedade de objeto. |
 | `json.push[array, valor]` | Adiciona um valor ao final de um array. |
 
-Os valores retornados por `json.get` podem ser convertidos com `.as_string[]`, `.as_int[]` e `.as_bool[]`. Essas conversões falham quando o tipo JSON não corresponde ao tipo solicitado. `json.set` e `json.push` modificam o objeto/array compartilhado e retornam `Bool`.
+Os valores retornados por `json.get` podem ser convertidos com `.asInt8[]`, `.asInt16[]`, `.asInt32[]`, `.asInt64[]`, `.asUInt8[]`, `.asUInt16[]`, `.asUInt32[]`, `.asUInt64[]`, `.asFloat32[]`, `.asFloat64[]`, `.asDouble32[]`, `.asDouble64[]`, `.asString[]` e `.asBool[]`. As formas antigas `.as_int[]`, `.as_string[]` e `.as_bool[]` continuam disponíveis por compatibilidade. As conversões numéricas aceitam somente valores JSON do tipo number e verificam a faixa do tipo solicitado; conversões incompatíveis ou fora da faixa falham.
+
+`json.write[caminho, valor]`, `json.set[objeto, chave, valor]` e `json.push[array, valor]` convertem automaticamente valores MonC compatíveis para JSON. Inteiros e floats viram números JSON, strings e caracteres viram strings, booleanos viram booleanos e `ByteArray`/`Bytes` viram arrays JSON de números entre 0 e 255. Arrays nativos também são convertidos recursivamente. Ponteiros e resultados não são serializáveis.
 
 O parser aceita os tipos JSON padrão, escapes de string, escapes Unicode `\\uXXXX`, números inteiros e decimais, arrays e objetos aninhados. A profundidade máxima é 128 níveis e strings de entrada/arquivos têm limite de 8 MiB. A serialização é compacta; a ordem das propriedades de objetos é ordenada pelas chaves. Erros de parsing ou de arquivo fazem a expressão falhar no interpretador.
 

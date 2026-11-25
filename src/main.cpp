@@ -505,6 +505,65 @@ struct Value {
     }
 };
 
+std::shared_ptr<JsonNode> value_to_json_node(const Value& value) {
+    auto node = std::make_shared<JsonNode>();
+    switch (value.kind) {
+        case ValueKind::Json:
+            return value.json_val ? value.json_val : make_json_null();
+        case ValueKind::Integer:
+        case ValueKind::Float:
+            node->type = JsonNode::Type::Number;
+            node->scalar = value.to_string();
+            return node;
+        case ValueKind::String:
+            node->type = JsonNode::Type::String;
+            node->scalar = value.str_val;
+            return node;
+        case ValueKind::Char:
+            node->type = JsonNode::Type::String;
+            node->scalar = std::string(1, value.char_val);
+            return node;
+        case ValueKind::Boolean:
+            node->type = JsonNode::Type::Boolean;
+            node->boolean_value = value.bool_val;
+            return node;
+        case ValueKind::Bytes:
+            node->type = JsonNode::Type::Array;
+            for (const auto byte : value.bytes_val) {
+                auto item = std::make_shared<JsonNode>();
+                item->type = JsonNode::Type::Number;
+                item->scalar = std::to_string(static_cast<unsigned int>(byte));
+                node->array.push_back(std::move(item));
+            }
+            return node;
+        case ValueKind::ByteArray:
+            node->type = JsonNode::Type::Array;
+            if (value.bytearray_val) {
+                for (const auto byte : *value.bytearray_val) {
+                    auto item = std::make_shared<JsonNode>();
+                    item->type = JsonNode::Type::Number;
+                    item->scalar = std::to_string(static_cast<unsigned int>(byte));
+                    node->array.push_back(std::move(item));
+                }
+            }
+            return node;
+        case ValueKind::Array:
+            node->type = JsonNode::Type::Array;
+            if (value.array_val) {
+                for (const auto& item : *value.array_val) {
+                    auto converted = value_to_json_node(item);
+                    if (!converted) return nullptr;
+                    node->array.push_back(std::move(converted));
+                }
+            }
+            return node;
+        case ValueKind::Result:
+        case ValueKind::Pointer:
+            return nullptr;
+    }
+    return nullptr;
+}
+
 struct FunctionDef {
     std::string name;
     std::vector<std::pair<std::string, std::string>> params;
@@ -2053,22 +2112,76 @@ private:
             if (value) return Value::make_string(value->to_string());
         }
 
+        const std::vector<std::pair<std::string, std::string>> json_integer_conversions = {
+            {".asInt8[]", "Int8"}, {".asInt16[]", "Int16"}, {".asInt32[]", "Int32"}, {".asInt64[]", "Int64"},
+            {".asUInt8[]", "UInt8"}, {".asUInt16[]", "UInt16"}, {".asUInt32[]", "UInt32"}, {".asUInt64[]", "UInt64"},
+            {".as_int[]", "Int32"}
+        };
+        for (const auto& conversion : json_integer_conversions) {
+            const auto& suffix = conversion.first;
+            if (text.size() > suffix.size() && text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                auto value = evaluate_expression(text.substr(0, text.size() - suffix.size()));
+                if (!value || value->kind != ValueKind::Json || !value->json_val ||
+                    value->json_val->type != JsonNode::Type::Number) return std::nullopt;
+                try {
+                    std::size_t used = 0;
+                    const bool is_unsigned = conversion.second.rfind("UInt", 0) == 0;
+                    long long number = 0;
+                    if (is_unsigned) {
+                        const auto unsigned_number = std::stoull(value->json_val->scalar, &used);
+                        if (unsigned_number > static_cast<unsigned long long>(std::numeric_limits<long long>::max())) return std::nullopt;
+                        number = static_cast<long long>(unsigned_number);
+                    } else {
+                        number = std::stoll(value->json_val->scalar, &used);
+                    }
+                    if (used != value->json_val->scalar.size()) return std::nullopt;
+                    const auto range = integer_type_range(conversion.second);
+                    if (!range || number < range->first) return std::nullopt;
+                    if (is_unsigned) {
+                        if (static_cast<unsigned long long>(number) > range->second) return std::nullopt;
+                    } else if (number > static_cast<long long>(range->second)) {
+                        return std::nullopt;
+                    }
+                    return Value::make_int(number, conversion.second);
+                } catch (...) { return std::nullopt; }
+            }
+        }
+
+        const std::vector<std::pair<std::string, std::string>> json_float_conversions = {
+            {".asFloat32[]", "Float32"}, {".asFloat64[]", "Float64"},
+            {".asDouble32[]", "Double32"}, {".asDouble64[]", "Double64"}
+        };
+        for (const auto& conversion : json_float_conversions) {
+            const auto& suffix = conversion.first;
+            if (text.size() > suffix.size() && text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                auto value = evaluate_expression(text.substr(0, text.size() - suffix.size()));
+                if (!value || value->kind != ValueKind::Json || !value->json_val ||
+                    value->json_val->type != JsonNode::Type::Number) return std::nullopt;
+                try {
+                    std::size_t used = 0;
+                    const double number = std::stod(value->json_val->scalar, &used);
+                    if (used != value->json_val->scalar.size() || !std::isfinite(number)) return std::nullopt;
+                    return Value::make_float(number, conversion.second);
+                } catch (...) { return std::nullopt; }
+            }
+        }
+
+        if (text.size() > 11 && text.substr(text.size() - 11) == ".asString[]") {
+            auto value = evaluate_expression(text.substr(0, text.size() - 11));
+            if (value && value->kind == ValueKind::Json && value->json_val &&
+                value->json_val->type == JsonNode::Type::String) return Value::make_string(value->json_val->scalar);
+            return std::nullopt;
+        }
         if (text.size() > 12 && text.substr(text.size() - 12) == ".as_string[]") {
             auto value = evaluate_expression(text.substr(0, text.size() - 12));
             if (value && value->kind == ValueKind::Json && value->json_val &&
                 value->json_val->type == JsonNode::Type::String) return Value::make_string(value->json_val->scalar);
             return std::nullopt;
         }
-        if (text.size() > 9 && text.substr(text.size() - 9) == ".as_int[]") {
+        if (text.size() > 9 && text.substr(text.size() - 9) == ".asBool[]") {
             auto value = evaluate_expression(text.substr(0, text.size() - 9));
             if (value && value->kind == ValueKind::Json && value->json_val &&
-                value->json_val->type == JsonNode::Type::Number) {
-                try {
-                    std::size_t used = 0;
-                    const auto number = std::stoll(value->json_val->scalar, &used);
-                    if (used == value->json_val->scalar.size()) return Value::make_int(number);
-                } catch (...) {}
-            }
+                value->json_val->type == JsonNode::Type::Boolean) return Value::make_bool(value->json_val->boolean_value);
             return std::nullopt;
         }
         if (text.size() > 10 && text.substr(text.size() - 10) == ".as_bool[]") {
@@ -2459,16 +2572,19 @@ private:
             if (fn_name == "json.set") {
                 auto args = parse_argument_list(arg_content);
                 if (args.size() != 3 || args[0].kind != ValueKind::Json || !args[0].json_val ||
-                    args[0].json_val->type != JsonNode::Type::Object || args[1].kind != ValueKind::String ||
-                    args[2].kind != ValueKind::Json) return std::nullopt;
-                args[0].json_val->object[args[1].str_val] = args[2].json_val;
+                    args[0].json_val->type != JsonNode::Type::Object || args[1].kind != ValueKind::String) return std::nullopt;
+                auto json_value = value_to_json_node(args[2]);
+                if (!json_value) return std::nullopt;
+                args[0].json_val->object[args[1].str_val] = std::move(json_value);
                 return Value::make_bool(true);
             }
             if (fn_name == "json.push") {
                 auto args = parse_argument_list(arg_content);
                 if (args.size() != 2 || args[0].kind != ValueKind::Json || !args[0].json_val ||
-                    args[0].json_val->type != JsonNode::Type::Array || args[1].kind != ValueKind::Json) return std::nullopt;
-                args[0].json_val->array.push_back(args[1].json_val);
+                    args[0].json_val->type != JsonNode::Type::Array) return std::nullopt;
+                auto json_value = value_to_json_node(args[1]);
+                if (!json_value) return std::nullopt;
+                args[0].json_val->array.push_back(std::move(json_value));
                 return Value::make_bool(true);
             }
             if (fn_name == "json.read") {
@@ -2486,10 +2602,12 @@ private:
             }
             if (fn_name == "json.write") {
                 auto args = parse_argument_list(arg_content);
-                if (args.size() != 2 || args[0].kind != ValueKind::String || args[1].kind != ValueKind::Json) return std::nullopt;
+                if (args.size() != 2 || args[0].kind != ValueKind::String) return std::nullopt;
+                auto json_value = value_to_json_node(args[1]);
+                if (!json_value) return std::nullopt;
                 std::ofstream file(args[0].str_val, std::ios::binary | std::ios::trunc);
                 if (!file) return std::nullopt;
-                const std::string output = json_serialize(args[1].json_val);
+                const std::string output = json_serialize(json_value);
                 file.write(output.data(), static_cast<std::streamsize>(output.size()));
                 if (!file) return std::nullopt;
                 return Value::make_bool(true);

@@ -1,3 +1,7 @@
+// Example: Defines a small robot-response function that reacts to simple text commands.
+
+// Checks the supplied command and prints the matching robot response.
+
 fn falar[a: String32] -> Int32 {
     if (a == "oi"){
         print["Olá, tudo bem?"];

@@ -1,4 +1,8 @@
+// Example: Demonstrates parsing JSON text, reading typed fields, creating an object, and serializing it.
+
 use json
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let documento: JsonValue = json.parse["{\"nome\":\"MoonCrypto\",\"versao\":2,\"ativo\":true}"];

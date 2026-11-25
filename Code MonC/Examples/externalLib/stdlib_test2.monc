@@ -1,9 +1,13 @@
+// Example: Demonstrates allocating and releasing memory through malloc and free.
+
 #external "stdlib.h"{
     playCodeC {
         void* malloc(size_t size);
         void free(void* ptr);
     }
 }
+
+// Runs the example and demonstrates the feature described in the file header.
 
 fn main[] -> Int32 {
     let memory = malloc(64);

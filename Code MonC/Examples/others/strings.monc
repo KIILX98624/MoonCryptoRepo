@@ -1,3 +1,7 @@
+// Example: Demonstrates string and character declarations, concatenation, reassignment, and comparisons.
+
+// Runs the example and demonstrates the feature described above.
+
 fn main[] -> Int32 {
     let titulo: String32 = "MoonCrypto 32 bits";
     let descricao: String64 = "Linguagem nativa com foco em segurança";
