@@ -1649,7 +1649,9 @@ private:
         const bool bytearray_method_call = method_dot != std::string::npos &&
             method_variable != variables_.end() && method_variable->second.kind == ValueKind::ByteArray;
         const bool native_builtin_call = name == "all" || name == "any" || name == "ascii" ||
-            name == "bin" || name == "bool" || name == "breakpoint" || name == "bytearray";
+            name == "bin" || name == "bool" || name == "breakpoint" || name == "bytearray",
+            name == "float" || name == "hash" || name == "hex" || name == "int" ||
+            name == "len" || name == "max" || name == "min";
         const bool c_external_call = c_functions_.find(name) != c_functions_.end();
         if (functions_.find(name) == functions_.end() && !native_json_call && !bytearray_method_call && !native_builtin_call && !c_external_call) {
             position_ = saved_pos;
@@ -2232,6 +2234,123 @@ private:
             const std::string arg_content = text.substr(open_pos + 1, text.size() - open_pos - 2);
             std::string fn_name = text.substr(0, open_pos);
             trim(fn_name);
+
+            if (fn_name == "float" || fn_name == "int" || fn_name == "hex" ||
+                fn_name == "hash" || fn_name == "len" || fn_name == "max" || fn_name == "min") {
+                auto args = parse_argument_list(arg_content);
+                if (fn_name == "float" || fn_name == "int" || fn_name == "hex" || fn_name == "hash" || fn_name == "len") {
+                    if (args.size() != 1) return std::nullopt;
+                    const Value& value = args[0];
+                    if (fn_name == "float") {
+                        if (value.kind == ValueKind::Integer) return Value::make_float(static_cast<double>(value.int_val), "Float64");
+                        if (value.kind == ValueKind::Float) return Value::make_float(value.float_val, "Float64");
+                        if (value.kind == ValueKind::Boolean) return Value::make_float(value.bool_val ? 1.0 : 0.0, "Float64");
+                        if (value.kind == ValueKind::String) {
+                            std::string input = value.str_val; trim(input);
+                            if (input.empty()) return std::nullopt;
+                            try { std::size_t used = 0; const double parsed = std::stod(input, &used); if (used != input.size()) return std::nullopt; return Value::make_float(parsed, "Float64"); }
+                            catch (...) { return std::nullopt; }
+                        }
+                        return std::nullopt;
+                    }
+                    if (fn_name == "int") {
+                        if (value.kind == ValueKind::Integer) return Value::make_int(value.int_val, "Int64");
+                        if (value.kind == ValueKind::Boolean) return Value::make_int(value.bool_val ? 1 : 0, "Int64");
+                        if (value.kind == ValueKind::Float) {
+                            if (!std::isfinite(value.float_val)) return std::nullopt;
+                            const long double number = static_cast<long double>(value.float_val);
+                            if (number < static_cast<long double>(std::numeric_limits<long long>::min()) ||
+                                number >= static_cast<long double>(std::numeric_limits<long long>::max())) return std::nullopt;
+                            return Value::make_int(static_cast<long long>(value.float_val), "Int64");
+                        }
+                        if (value.kind == ValueKind::String) {
+                            std::string input = value.str_val; trim(input);
+                            if (input.empty()) return std::nullopt;
+                            try { std::size_t used = 0; const long long parsed = std::stoll(input, &used, 10); if (used != input.size()) return std::nullopt; return Value::make_int(parsed, "Int64"); }
+                            catch (...) { return std::nullopt; }
+                        }
+                        return std::nullopt;
+                    }
+                    if (fn_name == "hex") {
+                        if (value.kind != ValueKind::Integer) return std::nullopt;
+                        const long long number = value.int_val;
+                        const bool negative = number < 0;
+                        const unsigned long long magnitude = negative ? static_cast<unsigned long long>(-(number + 1)) + 1ULL : static_cast<unsigned long long>(number);
+                        std::ostringstream out; out << (negative ? "-0x" : "0x") << std::hex << magnitude;
+                        return Value::make_string(out.str());
+                    }
+                    if (fn_name == "hash") {
+                        if (value.kind != ValueKind::Integer && value.kind != ValueKind::Float && value.kind != ValueKind::String &&
+                            value.kind != ValueKind::Char && value.kind != ValueKind::Boolean && value.kind != ValueKind::Bytes) return std::nullopt;
+                        const std::string material = value.type_name + ":" + value.to_string();
+                        unsigned long long hash_value = 14695981039346656037ULL;
+                        for (const unsigned char byte : material) { hash_value ^= byte; hash_value *= 1099511628211ULL; }
+                        return Value::make_int(static_cast<long long>(hash_value & 0x7fffffffffffffffULL), "Int64");
+                    }
+                    if (fn_name == "len") {
+                        std::size_t length = 0;
+                        switch (value.kind) {
+                            case ValueKind::String:
+                                for (const unsigned char byte : value.str_val) if ((byte & 0xC0) != 0x80) ++length;
+                                break;
+                            case ValueKind::Array: if (!value.array_val) return std::nullopt; length = value.array_val->size(); break;
+                            case ValueKind::ByteArray: if (!value.bytearray_val) return std::nullopt; length = value.bytearray_val->size(); break;
+                            case ValueKind::Bytes: length = value.bytes_val.size(); break;
+                            case ValueKind::Json:
+                                if (!value.json_val) return std::nullopt;
+                                switch (value.json_val->type) {
+                                    case JsonNode::Type::String: for (const unsigned char byte : value.json_val->scalar) if ((byte & 0xC0) != 0x80) ++length; break;
+                                    case JsonNode::Type::Array: length = value.json_val->array.size(); break;
+                                    case JsonNode::Type::Object: length = value.json_val->object.size(); break;
+                                    default: return std::nullopt;
+                                }
+                                break;
+                            default: return std::nullopt;
+                        }
+                        if (length > static_cast<std::size_t>(std::numeric_limits<int>::max())) return std::nullopt;
+                        return Value::make_int(static_cast<long long>(length), "Int32");
+                    }
+                }
+                if (fn_name == "max" || fn_name == "min") {
+                    std::vector<Value> candidates;
+                    if (args.size() == 1) {
+                        const Value& source = args.front();
+                        if (source.kind == ValueKind::Array && source.array_val) candidates = *source.array_val;
+                        else if (source.kind == ValueKind::ByteArray && source.bytearray_val) {
+                            for (const auto byte : *source.bytearray_val) candidates.push_back(Value::make_int(byte, "UInt8"));
+                        } else if (source.kind == ValueKind::Bytes) {
+                            for (const auto byte : source.bytes_val) candidates.push_back(Value::make_int(byte, "UInt8"));
+                        } else return std::nullopt;
+                    } else if (!args.empty()) candidates = args;
+                    else return std::nullopt;
+                    if (candidates.empty()) return std::nullopt;
+                    auto compare = [](const Value& left, const Value& right) -> std::optional<int> {
+                        if ((left.kind == ValueKind::Integer || left.kind == ValueKind::Float) &&
+                            (right.kind == ValueKind::Integer || right.kind == ValueKind::Float)) {
+                            if (left.kind == ValueKind::Integer && right.kind == ValueKind::Integer)
+                                return left.int_val < right.int_val ? -1 : (left.int_val > right.int_val ? 1 : 0);
+                            const double a = left.kind == ValueKind::Integer ? static_cast<double>(left.int_val) : left.float_val;
+                            const double b = right.kind == ValueKind::Integer ? static_cast<double>(right.int_val) : right.float_val;
+                            if (std::isnan(a) || std::isnan(b)) return std::nullopt;
+                            return a < b ? -1 : (a > b ? 1 : 0);
+                        }
+                        if (left.kind == ValueKind::String && right.kind == ValueKind::String)
+                            return left.str_val < right.str_val ? -1 : (left.str_val > right.str_val ? 1 : 0);
+                        if (left.kind == ValueKind::Char && right.kind == ValueKind::Char)
+                            return left.char_val < right.char_val ? -1 : (left.char_val > right.char_val ? 1 : 0);
+                        if (left.kind == ValueKind::Boolean && right.kind == ValueKind::Boolean)
+                            return left.bool_val == right.bool_val ? 0 : (left.bool_val ? 1 : -1);
+                        return std::nullopt;
+                    };
+                    Value selected = candidates.front();
+                    for (std::size_t i = 1; i < candidates.size(); ++i) {
+                        const auto order = compare(candidates[i], selected);
+                        if (!order) return std::nullopt;
+                        if ((fn_name == "max" && *order > 0) || (fn_name == "min" && *order < 0)) selected = candidates[i];
+                    }
+                    return selected;
+                }
+            }
 
             if (fn_name == "bytearray") {
                 auto args = parse_argument_list(arg_content);

@@ -56,3 +56,11 @@ add_test(
         "-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/bytearray_builtins.monc"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/check_bytearray_builtins.cmake"
 )
+
+add_test(
+    NAME python_builtin_conversions_and_sequences
+    COMMAND ${CMAKE_COMMAND}
+        -DMONC=$<TARGET_FILE:monc>
+        "-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/fixtures/python_builtins.monc"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/Code MonC/SmokeTest/check_python_builtins.cmake"
+)

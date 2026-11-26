@@ -281,8 +281,15 @@ Os métodos que alteram a sequência retornam `Bool` de sucesso, exceto `pop` e 
 | `bin[numero]` | Retorna a representação binária com prefixo `0b`; valores fracionários são arredondados para o inteiro mais próximo, com meio afastando-se de zero. |
 | `ascii[texto]` | Retorna a representação textual entre aspas, escapando caracteres não ASCII. |
 | `breakpoint[]` | Atualmente é um placeholder sem interrupção do depurador; retorna 0. |
+| `float[valor]` | Converte inteiro, float, booleano ou texto numérico em `Float64`. |
+| `int[valor]` | Converte inteiro, float (truncando em direção a zero), booleano ou texto inteiro decimal em `Int64`. |
+| `hex[numero]` | Retorna a representação hexadecimal de um inteiro, com prefixo `0x` e sinal preservado. |
+| `hash[valor]` | Retorna um hash determinístico de 63 bits para inteiros, floats, strings, caracteres, booleanos e `Bytes`. Não reproduz o hash aleatório do Python. |
+| `len[sequencia]` | Retorna o tamanho de string (pontos de código UTF-8), `Array`, `ByteArray`, `Bytes` ou JSON array/objeto/string. |
+| `max[sequencia]` / `max[a, b, ...]` | Retorna o maior elemento de um `Array`, `ByteArray`, `Bytes` ou lista de argumentos comparáveis. |
+| `min[sequencia]` / `min[a, b, ...]` | Retorna o menor elemento de um `Array`, `ByteArray`, `Bytes` ou lista de argumentos comparáveis. |
 
-As regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
+As conversões `int[]` e `float[]` rejeitam entradas incompatíveis ou texto parcialmente numérico; `int[]` trunca floats em direção a zero. `hash[]` usa FNV-1a estável, portanto o resultado é reproduzível entre execuções, mas não é compatível com o hash de strings do Python. `max[]` e `min[]` aceitam um array/ByteArray/Bytes ou dois ou mais argumentos comparáveis; sequências vazias e tipos incompatíveis falham.\n\nAs regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
 
 **Validação:** foi adicionado o fixture `Code MonC/SmokeTest/fixtures/bytearray_builtins.monc` e sua chamada à suíte `smoke.ps1`. A suíte CTest passou no GitHub Actions em Ubuntu e Windows (build e testes concluídos com sucesso no commit `b2d4c275`).
 

@@ -1,0 +1,32 @@
+fn main[] -> Int32 {
+    let decimal: Float64 = float["12.5"];
+    let decimal_bool: Float64 = float[true];
+    let inteiro: Int64 = int["-42"];
+    let truncado: Int64 = int[3.9];
+    let hexadecimal: String32 = hex[-255];
+    let tamanho_texto: Int32 = len["Olá"];
+    let numeros = Array[8, 2, 15, 4];
+    let maior: Int32 = max[numeros];
+    let menor: Int32 = min[numeros];
+    let maior_args: Int32 = max[10, 30, 20];
+    let menor_args: Int32 = min[10, 30, 20];
+    let tamanho_array: Int32 = len[numeros];
+    let bytes = bytearray[Array[1, 2, 3, 4]];
+    let tamanho_bytes: Int32 = len[bytes];
+    let hash_a: Int64 = hash["MonC"];
+    let hash_b: Int64 = hash["MonC"];
+    print[decimal];
+    print[decimal_bool];
+    print[inteiro];
+    print[truncado];
+    print[hexadecimal];
+    print[tamanho_texto];
+    print[maior];
+    print[menor];
+    print[maior_args];
+    print[menor_args];
+    print[tamanho_array];
+    print[tamanho_bytes];
+    print[hash_a == hash_b];
+    return 0;
+}
