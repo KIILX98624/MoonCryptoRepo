@@ -289,7 +289,9 @@ Os métodos que alteram a sequência retornam `Bool` de sucesso, exceto `pop` e 
 | `max[sequencia]` / `max[a, b, ...]` | Retorna o maior elemento de um `Array`, `ByteArray`, `Bytes` ou lista de argumentos comparáveis. |
 | `min[sequencia]` / `min[a, b, ...]` | Retorna o menor elemento de um `Array`, `ByteArray`, `Bytes` ou lista de argumentos comparáveis. |
 
-As conversões `int[]` e `float[]` rejeitam entradas incompatíveis ou texto parcialmente numérico; `int[]` trunca floats em direção a zero. `hash[]` usa FNV-1a estável, portanto o resultado é reproduzível entre execuções, mas não é compatível com o hash de strings do Python. `max[]` e `min[]` aceitam um array/ByteArray/Bytes ou dois ou mais argumentos comparáveis; sequências vazias e tipos incompatíveis falham.\n\nAs regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
+As conversões `int[]` e `float[]` rejeitam entradas incompatíveis ou texto parcialmente numérico; `int[]` trunca floats em direção a zero. `hash[]` usa FNV-1a estável, portanto o resultado é reproduzível entre execuções, mas não é compatível com o hash de strings do Python. `max[]` e `min[]` aceitam um array/ByteArray/Bytes ou dois ou mais argumentos comparáveis; sequências vazias e tipos incompatíveis falham.
+
+As regras de truthiness implementadas consideram falso: `false`, zero numérico, string vazia, caractere nulo, sequência vazia e JSON `null`. Os demais valores suportados são verdadeiros.
 
 **Validação:** foi adicionado o fixture `Code MonC/SmokeTest/fixtures/bytearray_builtins.monc` e sua chamada à suíte `smoke.ps1`. A suíte CTest passou no GitHub Actions em Ubuntu e Windows (build e testes concluídos com sucesso no commit `b2d4c275`).
 

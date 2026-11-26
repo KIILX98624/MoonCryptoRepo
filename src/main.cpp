@@ -1649,7 +1649,7 @@ private:
         const bool bytearray_method_call = method_dot != std::string::npos &&
             method_variable != variables_.end() && method_variable->second.kind == ValueKind::ByteArray;
         const bool native_builtin_call = name == "all" || name == "any" || name == "ascii" ||
-            name == "bin" || name == "bool" || name == "breakpoint" || name == "bytearray",
+            name == "bin" || name == "bool" || name == "breakpoint" || name == "bytearray" ||
             name == "float" || name == "hash" || name == "hex" || name == "int" ||
             name == "len" || name == "max" || name == "min";
         const bool c_external_call = c_functions_.find(name) != c_functions_.end();
