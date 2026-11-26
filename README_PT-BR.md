@@ -64,6 +64,7 @@ A tabela descreve o protótipo atual, não o projeto final da linguagem.
 | Módulo JSON nativo | Implementado |
 | `Bytes`, hashes criptográficos, HMAC e bytes aleatórios | Implementados no runtime atual, com backends específicos por plataforma |
 | `ByteArray` mutável e seus métodos documentados | Implementados no branch de desenvolvimento atual |
+| Built-ins `float`, `hash`, `hex`, `int`, `len`, `max` e `min` | Implementados no branch de desenvolvimento atual |
 | Algumas funções C de `math.h` e `stdlib.h` | Interoperabilidade inicial implementada |
 | Geração de executáveis nativos | Planejada, ainda não implementada |
 | Ownership e borrowing verificados pelo compilador | Planejados, ainda não implementados |
@@ -232,6 +233,34 @@ fn main[] -> Int32 {
 ```
 
 O branch atual também implementa métodos como `pop`, `vpop`, `insert`, `clear`, `copy`, `reverse`, `contains`, `index`, `count`, `extend`, `slice` e `fill`. As regras exatas dos argumentos estão em [MOONLANGUAGE.md](MDs/MOONLANGUAGE.md).
+
+### Built-ins numéricos e de sequências
+
+Além de `all`, `any`, `ascii`, `bin` e `bool`, a branch inclui funções para conversão e consulta de sequências:
+
+| Função | Descrição |
+|---|---|
+| `float[valor]` | Converte inteiro, float, booleano ou texto numérico completo para `Float64`. |
+| `int[valor]` | Converte inteiro, float, booleano ou texto inteiro decimal para `Int64`; floats são truncados em direção a zero. |
+| `hex[numero]` | Retorna uma string hexadecimal com prefixo `0x`. |
+| `hash[valor]` | Retorna hash FNV-1a determinístico de 63 bits para tipos suportados. Não é criptográfico. |
+| `len[sequencia]` | Retorna o tamanho de strings, arrays, `ByteArray`, `Bytes` e valores JSON do tipo string/array/objeto. |
+| `max[sequencia]` | Retorna o maior elemento de uma sequência ou de vários argumentos comparáveis. |
+| `min[sequencia]` | Retorna o menor elemento de uma sequência ou de vários argumentos comparáveis. |
+
+Exemplo:
+
+```monc
+let valores = Array[8, 2, 15, 4];
+let numero: Float64 = float["12.5"];
+let inteiro: Int64 = int["42"];
+let maior: Int32 = max[valores];
+let menor: Int32 = min[valores];
+let tamanho: Int32 = len[valores];
+let codigo: String32 = hex[255];
+```
+
+`max` e `min` não aceitam sequências vazias ou tipos incompatíveis. `int` e `float` rejeitam texto parcialmente numérico. `hash` é determinístico e não substitui funções criptográficas. Consulte `MDs/MOONLANGUAGE.md` para os detalhes completos.
 
 ## Módulos nativos
 

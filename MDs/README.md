@@ -539,4 +539,17 @@ As regras de truthiness implementadas consideram falso: `false`, zero numérico,
 
 **Validação:** foi adicionado o fixture `Code MonC/SmokeTest/fixtures/bytearray_builtins.monc` e sua chamada à suíte `smoke.ps1`. A suíte CTest passou no GitHub Actions em Ubuntu e Windows (build e testes concluídos com sucesso no commit `b2d4c275`).
 
-> **Escopo desta etapa:** este commit cobre o `ByteArray` e as built-ins `all`, `any`, `ascii`, `bin`, `bool` e o placeholder `breakpoint`. As demais built-ins da lista comparativa continuam pendentes e serão implementadas após definição de sintaxe e comportamento.
+### Built-ins adicionais
+
+Na continuação desta etapa, foram adicionadas as funções `float`, `hash`, `hex`, `int`, `len`, `max` e `min`.
+
+- `float` e `int` fazem conversões explícitas para `Float64` e `Int64`.
+- `hex` produz representação hexadecimal textual.
+- `hash` usa FNV-1a determinístico e não é uma função criptográfica.
+- `len` consulta o tamanho de strings, coleções e determinados valores JSON.
+- `max` e `min` selecionam extremos em sequências ou listas de argumentos comparáveis.
+
+O fixture `Code MonC/SmokeTest/fixtures/python_builtins.monc` e o teste CMake correspondente cobrem exemplos dessas funções. Consulte o GitHub Actions para o resultado mais recente da execução.
+
+> **Escopo atualizado:** esta branch inclui o `ByteArray`, as built-ins `all`, `any`, `ascii`, `bin`, `bool`, `breakpoint` (placeholder), `float`, `hash`, `hex`, `int`, `len`, `max` e `min`. A compatibilidade com Python continua parcial.
+

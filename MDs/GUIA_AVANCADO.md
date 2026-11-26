@@ -199,6 +199,50 @@ Operadores documentados:
 
 A cobertura de cada operador depende das categorias de valores e dos caminhos de avaliação implementados. Consulte a especificação e os testes antes de assumir que uma combinação arbitrária de tipos é aceita.
 
+### 6.1 Built-ins numéricos e de sequências
+
+O runtime implementa um subconjunto de funções built-in inspiradas no Python. Elas são reconhecidas como chamadas nativas e usam a sintaxe MonC com colchetes.
+
+| Função | Argumentos aceitos | Resultado e observações |
+|---|---|---|
+| `float[valor]` | Inteiro, float, booleano ou string numérica completa | Retorna `Float64`. Booleanos viram `1.0` ou `0.0`. |
+| `int[valor]` | Inteiro, float finito, booleano ou string inteira decimal completa | Retorna `Int64`. Floats são truncados em direção a zero. |
+| `hex[numero]` | Inteiro | Retorna string com prefixo `0x`; negativos preservam o sinal. |
+| `hash[valor]` | Inteiro, float, string, caractere, booleano ou `Bytes` | Retorna hash FNV-1a determinístico limitado a 63 bits. Não é compatível com o hash do Python e não é criptográfico. |
+| `len[valor]` | String UTF-8, `Array`, `ByteArray`, `Bytes` ou `JsonValue` string/array/objeto | Retorna `Int32`. Strings contam pontos de código UTF-8. |
+| `max[sequencia]` / `max[a, b, ...]` | `Array`, `ByteArray`, `Bytes` ou argumentos comparáveis | Retorna o maior valor original, preservando seu tipo. |
+| `min[sequencia]` / `min[a, b, ...]` | Mesmos tipos de `max` | Retorna o menor valor original, preservando seu tipo. |
+
+Exemplo:
+
+```monc
+fn main[] -> Int32 {
+    let decimal: Float64 = float["12.5"];
+    let inteiro: Int64 = int[3.9];
+    let codigo: String32 = hex[255];
+    let valores = Array[8, 2, 15, 4];
+    let maior: Int32 = max[valores];
+    let menor: Int32 = min[valores];
+    let quantidade: Int32 = len[valores];
+    print[decimal];
+    print[inteiro];
+    print[codigo];
+    print[maior];
+    print[menor];
+    print[quantidade];
+    return 0;
+}
+```
+
+Restrições relevantes:
+
+- `float` e `int` rejeitam strings vazias, texto parcialmente numérico e categorias não suportadas.
+- `int` rejeita valores float não finitos e valores fora da faixa de `Int64`.
+- `hex` recebe somente valores inteiros.
+- `hash` é determinístico nesta implementação; não deve ser usado como substituto de SHA-256, HMAC ou outro hash criptográfico.
+- `len` falha para tipos sem comprimento definido, como números e booleanos.
+- `max` e `min` falham para sequências vazias e elementos que não possam ser comparados entre si.
+
 ## 7. Módulos e resolução de código
 
 A diretiva `#external "nome"` carrega outro arquivo MonC ou um módulo reconhecido pelo runtime. Funções importadas são registradas no ambiente de execução.

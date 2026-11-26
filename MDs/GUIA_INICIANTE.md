@@ -399,6 +399,45 @@ fn main[] -> Int32 {
 
 A API inicial inclui `array.length`, `array.push`, `array.pop`, `array.get`, `array.set`, `array.remove` e `array.clear`.
 
+## 8.1 Built-ins úteis para números e sequências
+
+A MonC inclui algumas funções nativas inspiradas nos built-ins do Python. Elas são chamadas com colchetes, como as demais funções MonC.
+
+```monc
+fn main[] -> Int32 {
+    let decimal: Float64 = float["12.5"];
+    let inteiro: Int64 = int["-42"];
+    let hexadecimal: String32 = hex[255];
+    let numeros = Array[8, 2, 15, 4];
+    let quantidade: Int32 = len[numeros];
+    let maior: Int32 = max[numeros];
+    let menor: Int32 = min[numeros];
+    print[decimal];
+    print[inteiro];
+    print[hexadecimal];
+    print[quantidade];
+    print[maior];
+    print[menor];
+    return 0;
+}
+```
+
+| Função | Uso |
+|---|---|
+| `float[valor]` | Converte inteiro, float, booleano ou texto numérico para `Float64`. |
+| `int[valor]` | Converte inteiro, float, booleano ou texto inteiro decimal para `Int64`. Floats são truncados em direção a zero. |
+| `hex[numero]` | Produz texto hexadecimal para um inteiro, com prefixo `0x`. |
+| `hash[valor]` | Produz um hash determinístico para tipos escalares suportados e `Bytes`. |
+| `len[sequencia]` | Retorna o tamanho de strings, arrays, `ByteArray`, `Bytes` ou JSON do tipo string/array/objeto. |
+| `max[sequencia]` | Retorna o maior elemento de um array, `ByteArray`, `Bytes` ou vários argumentos comparáveis. |
+| `min[sequencia]` | Retorna o menor elemento nas mesmas condições de `max`. |
+
+Também é possível passar vários argumentos para `max` e `min`: `max[10, 30, 20]` e `min[10, 30, 20]`.
+
+**Cuidados:** `int["12.5"]` não é válido, pois o texto precisa representar um inteiro decimal completo. `hex[]` recebe um inteiro. `max[]` e `min[]` não aceitam sequências vazias nem tipos não comparáveis. O `hash[]` da MonC usa FNV-1a determinístico e não é um hash criptográfico nem reproduz o hash do Python.
+
+Consulte [MOONLANGUAGE.md](MOONLANGUAGE.md) para detalhes e limitações.
+
 ## 9. Módulos e código em outros arquivos
 
 Um arquivo pode declarar funções que serão usadas por outro arquivo. A diretiva `#external` carrega o módulo:
